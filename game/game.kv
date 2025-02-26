@@ -1,0 +1,39 @@
+#;kivy 2.3.1
+<GameScreen>:
+    RelativeLayout:
+        Image:
+            source: "assets/world_map.png"
+            size_hint: (1, 1)
+        
+        Button:
+            text: "USA"
+            size_hint: None, None
+            size: (80, 50)
+            pos: (200, 300)
+            background_color: (0.2, 0.6, 1, 1)  # เพิ่มสีพื้นหลัง
+            color: (1, 1, 1, 1)  # สีตัวอักษร
+            on_release: root.select_country("USA")
+
+        Button:
+            text: "Canada"
+            size_hint: None, None
+            size: (80, 50)
+            pos: (220, 350)
+            on_release: root.select_country("Canada")
+
+        Button:
+            text: "Mexico"
+            size_hint: None, None
+            size: (80, 50)
+            pos: (180, 250)
+            on_release: root.select_country("Mexico")
+
+<RoundedButton@Button>:
+    background_color: (0, 0, 0, 0)
+    canvas.before:
+        Color:
+            rgba: (0.2, 0.6, 1, 1)
+        RoundedRectangle:
+            size: self.size
+            pos: self.pos
+            radius: [10,]
