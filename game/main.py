@@ -6,8 +6,8 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.uix.label import Label
 import random
+from bullet import Bullet  # นำเข้า Bullet class
 
-# คลาสสำหรับไดโนเสาร์
 class Dino(Widget):
     velocity_x = NumericProperty(0)
     velocity_y = NumericProperty(0)
@@ -19,23 +19,27 @@ class Dino(Widget):
             self.y = 0
             self.velocity_y = 0
 
-# คลาสสำหรับสิ่งกีดขวาง
+    def shoot(self):
+        # คำนวณตำแหน่งเริ่มต้นของกระสุน (ด้านขวาของไดโน)
+        start_pos = (self.x + self.width, self.y + self.height/2)
+        return Bullet(start_pos)
+
 class Obstacle(Widget):
     def move(self):
-        self.x -= 3  # ความเร็วสิ่งกีดขวาง
+        self.x -= 3
 
-# คลาสหลักของเกม
 class DinoGame(Widget):
-    game_active = BooleanProperty(True)  # เปลี่ยนเป็น BooleanProperty
+    game_active = BooleanProperty(True)
     dino = ObjectProperty(None)
     score = NumericProperty(0)
-    obstacles = []  # รายการสิ่งกีดขวาง
+    obstacles = []
+    bullets = []  # เพิ่มรายการสำหรับกระสุน
 
     def __init__(self, **kwargs):
         super(DinoGame, self).__init__(**kwargs)
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        self.spawn_obstacle()  # เพิ่มสิ่งกีดขวางแรก
+        self.spawn_obstacle()
 
     def _keyboard_closed(self):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
@@ -44,10 +48,13 @@ class DinoGame(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if keycode[1] == 'spacebar' and self.dino.y == 0:
             self.dino.velocity_y = 10
+        elif keycode[1] == 'f':  # กด 'f' เพื่อยิง
+            bullet = self.dino.shoot()
+            self.add_widget(bullet)
+            self.bullets.append(bullet)
         return True
 
     def spawn_obstacle(self):
-        # สร้างสิ่งกีดขวางใหม่
         obstacle = Obstacle()
         min_distance = 500
         obstacle.x = self.width + min_distance + random.randint(0, 300)
@@ -66,6 +73,13 @@ class DinoGame(Widget):
         self.dino.velocity_y -= 0.10
         self.dino.move()
 
+        # อัปเดตกระสุน
+        for bullet in self.bullets[:]:
+            bullet.move()
+            if bullet.x > self.width:  # ลบกระสุนเมื่อออกนอกจอ
+                self.remove_widget(bullet)
+                self.bullets.remove(bullet)
+
         # อัปเดตสิ่งกีดขวาง
         for obstacle in self.obstacles[:]:
             obstacle.move()
@@ -74,29 +88,41 @@ class DinoGame(Widget):
                 self.obstacles.remove(obstacle)
                 self.score += 1
 
-            # ตรวจจับการชน
+            # ตรวจสอบการชนระหว่างกระสุนกับสิ่งกีดขวาง
+            for bullet in self.bullets[:]:
+                if bullet.collide_widget(obstacle):
+                    self.remove_widget(obstacle)
+                    self.remove_widget(bullet)
+                    self.obstacles.remove(obstacle)
+                    self.bullets.remove(bullet)
+                    self.score += 5  # คะแนนพิเศษเมื่อยิงถูก
+                    break
+
+            # ตรวจจับการชนระหว่างไดโนกับสิ่งกีดขวาง
             if self.dino.collide_widget(obstacle):
                 self.game_over()
 
-        # สุ่มเพิ่มสิ่งกีดขวางใหม่
         if random.random() < 0.02:
             self.spawn_obstacle()
 
     def game_over(self):
-        self.game_active = False  # อัปเดตสถานะ
+        self.game_active = False
         for obstacle in self.obstacles:
             self.remove_widget(obstacle)
+        for bullet in self.bullets:
+            self.remove_widget(bullet)
         self.obstacles.clear()
+        self.bullets.clear()
         Clock.unschedule(self.update)
 
     def restart(self):
         self.game_active = True
         self.score = 0
         self.obstacles.clear()
+        self.bullets.clear()
         self.spawn_obstacle()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
-# แอปหลัก
 class DinoApp(App):
     def build(self):
         game = DinoGame()
