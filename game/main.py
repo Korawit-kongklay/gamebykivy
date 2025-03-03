@@ -1,6 +1,6 @@
 from kivy.app import App
 from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProperty
+from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProperty, BooleanProperty
 from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -26,7 +26,7 @@ class Obstacle(Widget):
 
 # คลาสหลักของเกม
 class DinoGame(Widget):
-    game_active = True
+    game_active = BooleanProperty(True)  # เปลี่ยนเป็น BooleanProperty
     dino = ObjectProperty(None)
     score = NumericProperty(0)
     obstacles = []  # รายการสิ่งกีดขวาง
@@ -49,44 +49,44 @@ class DinoGame(Widget):
     def spawn_obstacle(self):
         # สร้างสิ่งกีดขวางใหม่
         obstacle = Obstacle()
-        obstacle.x = self.width + random.randint(30, 500)  # สุ่มระยะห่างจากขอบขวา
+        min_distance = 500
+        obstacle.x = self.width + min_distance + random.randint(0, 300)
         obstacle.y = 0
         self.add_widget(obstacle)
         self.obstacles.append(obstacle)
 
     def update(self, dt):
         if not self.game_active:
-            if self.dino is None:
-                print("Error: Dino not initialized!")
-                return
-
-            # อัปเดตไดโนเสาร์
-            self.dino.velocity_y -= 0.5
-            self.dino.move()
-
-            # อัปเดตสิ่งกีดขวาง
-            for obstacle in self.obstacles[:]:  # ใช้ [:] เพื่อป้องกันปัญหาการลบระหว่างวนลูป
-                obstacle.move()
-                if obstacle.x < -obstacle.width:  # ถ้าสิ่งกีดขวางเลยขอบซ้าย
-                    self.remove_widget(obstacle)
-                    self.obstacles.remove(obstacle)
-                    self.score += 1
-
-                # ตรวจจับการชน
-                if self.dino.collide_widget(obstacle):
-                    self.game_over()
-
-            # สุ่มเพิ่มสิ่งกีดขวางใหม่
-            if random.random() < 0.02:  # โอกาส 2% ต่อเฟรม (ปรับได้)
-                self.spawn_obstacle()
+            return
+        if self.dino is None:
+            print("Error: Dino not initialized!")
             return
 
+        # อัปเดตไดโนเสาร์
+        self.dino.velocity_y -= 0.10
+        self.dino.move()
+
+        # อัปเดตสิ่งกีดขวาง
+        for obstacle in self.obstacles[:]:
+            obstacle.move()
+            if obstacle.x < -obstacle.width:
+                self.remove_widget(obstacle)
+                self.obstacles.remove(obstacle)
+                self.score += 1
+
+            # ตรวจจับการชน
+            if self.dino.collide_widget(obstacle):
+                self.game_over()
+
+        # สุ่มเพิ่มสิ่งกีดขวางใหม่
+        if random.random() < 0.02:
+            self.spawn_obstacle()
+
     def game_over(self):
-        self.game_active = False
+        self.game_active = False  # อัปเดตสถานะ
         for obstacle in self.obstacles:
             self.remove_widget(obstacle)
         self.obstacles.clear()
-        self.add_widget(Label(text=f'Game Over! Score: {self.score}', font_size=40, center=self.center))
         Clock.unschedule(self.update)
 
     def restart(self):
@@ -96,15 +96,12 @@ class DinoGame(Widget):
         self.spawn_obstacle()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
-    
-
 # แอปหลัก
 class DinoApp(App):
     def build(self):
         game = DinoGame()
         Clock.schedule_interval(game.update, 1.0 / 60.0)
         return game
-
 
 if __name__ == '__main__':
     DinoApp().run()

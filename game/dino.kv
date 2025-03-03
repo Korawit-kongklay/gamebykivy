@@ -20,17 +20,23 @@
 
 <DinoGame>:
     dino: dino
-    obstacle: obstacle
     Dino:
         id: dino
         x: 50
-        y: 0
-    Obstacle:
-        id: obstacle
-        x: root.width - 100
         y: 0
     Label:
         text: str(root.score)
         font_size: 20
         top: root.top - 10
         right: root.right - 10
+    Label:
+        text: f'Game Over! Score: {root.score}' if not root.game_active else ''
+        font_size: 40
+        center: root.center
+    Button:
+        text: 'Restart'
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x': 0.5, 'center_y': 0.4}
+        opacity: 0 if root.game_active else 1  # ซ่อนเมื่อเกมดำเนินอยู่
+        disabled: root.game_active  # ปิดการใช้งานเมื่อเกมดำเนินอยู่
+        on_press: root.restart()
