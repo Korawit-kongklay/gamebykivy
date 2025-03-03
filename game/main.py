@@ -1,6 +1,6 @@
 from kivy.app import App
 from kivy.clock import Clock
-from dino_game import DinoGame  # นำเข้า DinoGame จาก dino_game.py
+from components.dino_game import DinoGame  # นำเข้า DinoGame จาก dino_game.py
 
 class DinoApp(App):
     def build(self):
