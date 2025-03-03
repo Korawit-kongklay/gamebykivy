@@ -1,5 +1,13 @@
 #:kivy 2.0.0
 
+<Bullet>:
+    canvas:
+        Color:
+            rgba: 0, 0, 1, 1  # สีน้ำเงินสำหรับกระสุน
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
 <Dino>:
     size: 50, 50
     canvas:
@@ -37,6 +45,6 @@
         text: 'Restart'
         size_hint: 0.2, 0.1
         pos_hint: {'center_x': 0.5, 'center_y': 0.4}
-        opacity: 0 if root.game_active else 1  # ซ่อนเมื่อเกมดำเนินอยู่
-        disabled: root.game_active  # ปิดการใช้งานเมื่อเกมดำเนินอยู่
+        opacity: 0 if root.game_active else 1
+        disabled: root.game_active
         on_press: root.restart()
