@@ -1,0 +1,36 @@
+#:kivy 2.0.0
+
+<Dino>:
+    size: 50, 50
+    canvas:
+        Color:
+            rgba: 1, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<Obstacle>:
+    size: 30, 50
+    canvas:
+        Color:
+            rgba: 0, 1, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<DinoGame>:
+    dino: dino
+    obstacle: obstacle
+    Dino:
+        id: dino
+        x: 50
+        y: 0
+    Obstacle:
+        id: obstacle
+        x: root.width - 100
+        y: 0
+    Label:
+        text: str(root.score)
+        font_size: 20
+        top: root.top - 10
+        right: root.right - 10
