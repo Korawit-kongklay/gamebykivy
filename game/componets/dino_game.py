@@ -3,14 +3,15 @@ from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
 import random
-from dino import Dino  # นำเข้า Dino จาก dino.py
-from obstacle import Obstacle  # นำเข้า Obstacle จาก obstacle.py
+from dino import Dino
+from obstacle import Obstacle
 
 class DinoGame(Widget):
     game_active = BooleanProperty(True)
     dino = ObjectProperty(None)
     score = NumericProperty(0)
     obstacles = []
+    bullets = []  # เพิ่มลิสต์สำหรับกระสุน
 
     def __init__(self, **kwargs):
         super(DinoGame, self).__init__(**kwargs)
@@ -45,29 +46,9 @@ class DinoGame(Widget):
         self.dino.velocity_y -= 0.10
         self.dino.move()
 
+        # อัปเดตสิ่งกีดขวาง (วางโค้ดที่นี่)
         for obstacle in self.obstacles[:]:
             obstacle.move()
             if obstacle.x < -obstacle.width:
                 self.remove_widget(obstacle)
-                self.obstacles.remove(obstacle)
-                self.score += 1
-
-            if self.dino.collide_widget(obstacle):
-                self.game_over()
-
-        if random.random() < 0.02:
-            self.spawn_obstacle()
-
-    def game_over(self):
-        self.game_active = False
-        for obstacle in self.obstacles:
-            self.remove_widget(obstacle)
-        self.obstacles.clear()
-        Clock.unschedule(self.update)
-
-    def restart(self):
-        self.game_active = True
-        self.score = 0
-        self.obstacles.clear()
-        self.spawn_obstacle()
-        Clock.schedule_interval(self.update, 1.0 / 60.0)
+                self.obstacle
