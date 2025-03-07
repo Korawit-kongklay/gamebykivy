@@ -52,3 +52,11 @@
         opacity: 0 if root.game_active else 1
         disabled: root.game_active
         on_press: root.restart()
+
+<Boss>:
+    size: 60, 80  # บอสใหญ่ขึ้น
+    canvas:
+        Rectangle:
+            source: 'boss.jpg'  # ภาพบอส (เช่น หัวหน้านักรบ)
+            pos: self.pos
+            size: self.size

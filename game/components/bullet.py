@@ -10,6 +10,9 @@ class Bullet(Widget):
 
     def __init__(self, start_pos, **kwargs):
         super().__init__(**kwargs)
+        self.spawn_frequency = 0.03  # ปรับเป็น 3%
+        self.min_spawn_distance = 200  # ปรับเป็น 200 พิกเซล
+        self.shoot_cooldown = 0.8  # ปรับเป็น 0.8 วินาที
         self.size = (20, 5)  # ขนาดกระสุน
         self.pos = start_pos  # เริ่มจากตำแหน่งที่กำหนด
 
