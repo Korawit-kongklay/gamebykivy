@@ -6,17 +6,20 @@ from kivy.core.window import Window
 import random
 from .dino import Dino
 from .obstacle import Obstacle
-from .bullet import Bullet  # นำเข้า Bullet
+from .bullet import Bullet
 
 class DinoGame(Widget):
     game_active = BooleanProperty(True)
     dino = ObjectProperty(None)
     score = NumericProperty(0)
+    stage = NumericProperty(1)
+    obstacles_to_clear = NumericProperty(10)  # จำนวนสิ่งกีดขวางที่ต้องเคลียร์ต่อด่าน
+    obstacles_cleared = NumericProperty(0)
     obstacles = []
-    bullets = []  # ลิสต์สำหรับเก็บกระสุน
+    bullets = []
 
     def __init__(self, **kwargs):
-        super(DinoGame, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self.spawn_obstacle()
@@ -28,7 +31,7 @@ class DinoGame(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if keycode[1] == 'spacebar' and self.dino.y == 0:
             self.dino.velocity_y = 10
-        elif keycode[1] == 'b' and self.game_active:  # กด 'b' เพื่อยิง
+        elif keycode[1] == 'b' and self.game_active:
             start_pos = (self.dino.x + self.dino.width, self.dino.y + self.dino.height / 2)
             bullet = Bullet(start_pos=start_pos)
             self.add_widget(bullet)
@@ -50,41 +53,49 @@ class DinoGame(Widget):
             print("Error: Dino not initialized!")
             return
 
-        # อัปเดตไดโนเสาร์
         self.dino.velocity_y -= 0.10
         self.dino.move()
 
-        # อัปเดตกระสุน
         for bullet in self.bullets[:]:
             bullet.move()
-            if bullet.x > self.width:  # ลบกระสุนถ้าเลยขอบขวา
+            if bullet.x > self.width:
                 self.remove_widget(bullet)
                 self.bullets.remove(bullet)
 
-        # อัปเดตสิ่งกีดขวางและตรวจจับการชน
         for obstacle in self.obstacles[:]:
             obstacle.move()
             if obstacle.x < -obstacle.width:
                 self.remove_widget(obstacle)
                 self.obstacles.remove(obstacle)
                 self.score += 1
+                self.obstacles_cleared += 1
 
-            # ตรวจสอบการชนระหว่างกระสุนกับสิ่งกีดขวาง
             for bullet in self.bullets[:]:
                 if bullet.collide_widget(obstacle):
                     self.remove_widget(obstacle)
                     self.remove_widget(bullet)
                     self.obstacles.remove(obstacle)
                     self.bullets.remove(bullet)
-                    self.score += 5  # คะแนนพิเศษเมื่อยิงถูก
+                    self.score += 5
+                    self.obstacles_cleared += 1
                     break
 
-            # ตรวจจับการชนระหว่างไดโนกับสิ่งกีดขวาง
             if self.dino.collide_widget(obstacle):
                 self.game_over()
 
-        if random.random() < 0.02:
+        if self.obstacles_cleared >= self.obstacles_to_clear:
+            self.next_stage()
+        elif len(self.obstacles) < 3:  # จำกัดจำนวนสิ่งกีดขวางในด่าน
             self.spawn_obstacle()
+
+    def next_stage(self):
+        self.stage += 1
+        self.obstacles_cleared = 0
+        self.obstacles.clear()
+        if self.stage <= 5:  # จำกัด 5 ด่าน
+            self.spawn_obstacle()
+        else:
+            self.game_active = False  # ชนะเกม
 
     def game_over(self):
         self.game_active = False
@@ -99,6 +110,8 @@ class DinoGame(Widget):
     def restart(self):
         self.game_active = True
         self.score = 0
+        self.stage = 1
+        self.obstacles_cleared = 0
         self.obstacles.clear()
         self.bullets.clear()
         self.spawn_obstacle()

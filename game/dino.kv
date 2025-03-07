@@ -3,43 +3,46 @@
 <Dino>:
     size: 50, 50
     canvas:
-        Color:
-            rgba: 1, 0, 0, 1
         Rectangle:
+            source: 'dino.png'  # ไดโนเสาร์ Google
             pos: self.pos
             size: self.size
 
 <Obstacle>:
     size: 30, 50
     canvas:
-        Color:
-            rgba: 0, 1, 0, 1
         Rectangle:
+            source: 'gunman.png'  # เปลี่ยนเป็นคนครมีปืน (ถ้ามีภาพ)
             pos: self.pos
             size: self.size
 
 <Bullet>:
-    size: 20, 5  # ตรงกับที่กำหนดใน Bullet.__init__
+    size: 20, 5
     canvas:
         Color:
-            rgba: 0, 0, 1, 1  # สีน้ำเงิน
+            rgba: 0, 0, 1, 1
         Rectangle:
             pos: self.pos
             size: self.size
 
 <DinoGame>:
     dino: dino
+    canvas.before:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+            source: 'nakhon_background.png'  # พื้นหลังนครศรีธรรมราช
     Dino:
         id: dino
         x: 50
         y: 0
     Label:
-        text: str(root.score)
+        text: f'Stage: {root.stage} Score: {root.score}'  # แสดงด่านและคะแนน
         font_size: 20
         top: root.top - 10
         right: root.right - 10
     Label:
-        text: f'Game Over! Score: {root.score}' if not root.game_active else ''
+        text: f'Game Over! Score: {root.score}' if not root.game_active and root.stage <= 5 else 'Back to Google!' if root.stage > 5 else ''
         font_size: 40
         center: root.center
     Button:
