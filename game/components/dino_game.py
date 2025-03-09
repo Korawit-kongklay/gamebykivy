@@ -9,10 +9,25 @@ from .bullet import Bullet
 
 # คลาสสำหรับบอส
 class Boss(Obstacle):
-    health = NumericProperty(3)  # พลังชีวิตบอส
-
+    health = NumericProperty(3)
     def move(self):
-        self.x -= 1  # บอสเคลื่อนที่ช้ากว่า
+        self.x -= 1
+
+# คลาสสำหรับ Power-Ups
+class SpeedPowerUp(Widget):
+    pass
+
+class ShieldPowerUp(Widget):
+    pass
+
+class AmmoPowerUp(Widget):
+    pass
+
+class HealthPowerUp(Widget):
+    pass
+
+class ScorePowerUp(Widget):
+    pass
 
 class DinoGame(Widget):
     game_active = BooleanProperty(True)
@@ -23,12 +38,15 @@ class DinoGame(Widget):
     obstacles_cleared = NumericProperty(0)
     obstacles = []
     bullets = []
+    power_ups = []  # ลิสต์สำหรับ Power-Ups
+    health = NumericProperty(3)  # เพิ่มชีวิตไดโน (ใช้กับ HealthPowerUp)
+    shield_active = BooleanProperty(False)  # สถานะโล่ (ใช้กับ ShieldPowerUp)
     
     # ตัวแปรปรับแต่ง
-    spawn_frequency = NumericProperty(0.02)  # ความถี่การเกิดอุปสรรค (0.02 = 2% ต่อเฟรม)
-    min_spawn_distance = NumericProperty(150)  # ระยะห่างขั้นต่ำระหว่างอุปสรรค
-    shoot_cooldown = NumericProperty(0.5)  # วินาทีที่ต้องรอก่อนยิงครั้งต่อไป
-    last_shot_time = NumericProperty(0)  # เวลาที่บันทึกการยิงล่าสุด
+    spawn_frequency = NumericProperty(0.02)
+    min_spawn_distance = NumericProperty(150)
+    shoot_cooldown = NumericProperty(0.5)
+    last_shot_time = NumericProperty(0)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,32 +62,57 @@ class DinoGame(Widget):
         if keycode[1] == 'spacebar' and self.dino.y == 0:
             self.dino.velocity_y = 10
         elif keycode[1] == 'b' and self.game_active:
-            current_time = Clock.get_time()  # รับเวลาปัจจุบัน
-            if current_time - self.last_shot_time >= self.shoot_cooldown:  # ตรวจสอบ cooldown
+            current_time = Clock.get_time()
+            if current_time - self.last_shot_time >= self.shoot_cooldown:
                 start_pos = (self.dino.x + self.dino.width, self.dino.y + self.dino.height / 2)
                 bullet = Bullet(start_pos=start_pos)
                 self.add_widget(bullet)
                 self.bullets.append(bullet)
-                self.last_shot_time = current_time  # อัปเดตเวลาการยิง
+                self.last_shot_time = current_time
         return True
 
     def spawn_obstacle(self):
-        # ตรวจสอบระยะห่างจากอุปสรรคตัวล่าสุด
-        if self.obstacles:
-            last_obstacle = self.obstacles[-1]
-            if self.width - last_obstacle.x < self.min_spawn_distance:
-                return  # ไม่เกิดถ้าระยะห่างน้อยเกินไป
-
-        # ทุกด่านที่ 3 มีบอส ถ้ายังไม่มีบอสในฉาก
+        if self.obstacles and self.width - self.obstacles[-1].x < self.min_spawn_distance:
+            return
         if self.stage % 3 == 0 and not any(isinstance(o, Boss) for o in self.obstacles):
             obstacle = Boss()
         else:
             obstacle = Obstacle()
-        min_distance = 500
-        obstacle.x = self.width + min_distance + random.randint(0, 300)
+        obstacle.x = self.width + 500 + random.randint(0, 300)
         obstacle.y = 0
         self.add_widget(obstacle)
         self.obstacles.append(obstacle)
+
+    def spawn_power_up(self):
+        if random.random() < 0.01:  # 1% ต่อเฟรม
+            power_up_types = [SpeedPowerUp, ShieldPowerUp, AmmoPowerUp, HealthPowerUp, ScorePowerUp]
+            power_up = random.choice(power_up_types)()
+            power_up.x = self.width + random.randint(0, 300)
+            power_up.y = random.randint(50, 200)  # 浮อยู่ในอากาศ
+            self.add_widget(power_up)
+            self.power_ups.append(power_up)
+
+    def collect_power_up(self, power_up):
+        if isinstance(power_up, SpeedPowerUp):
+            self.dino.velocity_x = 2  # เพิ่มความเร็วชั่วคราว
+            Clock.schedule_once(lambda dt: self.reset_speed(), 5)  # รีเซ็ตหลัง 5 วินาที
+        elif isinstance(power_up, ShieldPowerUp):
+            self.shield_active = True
+            Clock.schedule_once(lambda dt: self.reset_shield(), 10)  # โล่หมดหลัง 10 วินาที
+        elif isinstance(power_up, AmmoPowerUp):
+            self.shoot_cooldown = max(0.1, self.shoot_cooldown - 0.2)  # ลด cooldown
+        elif isinstance(power_up, HealthPowerUp):
+            self.health = min(5, self.health + 1)  # เพิ่มชีวิต (สูงสุด 5)
+        elif isinstance(power_up, ScorePowerUp):
+            self.score += 50  # คะแนนพิเศษ
+        self.remove_widget(power_up)
+        self.power_ups.remove(power_up)
+
+    def reset_speed(self):
+        self.dino.velocity_x = 0  # รีเซ็ตความเร็ว
+
+    def reset_shield(self):
+        self.shield_active = False  # รีเซ็ตโล่
 
     def update(self, dt):
         if not self.game_active:
@@ -78,18 +121,15 @@ class DinoGame(Widget):
             print("Error: Dino not initialized!")
             return
 
-        # อัปเดตไดโนเสาร์
         self.dino.velocity_y -= 0.10
         self.dino.move()
 
-        # อัปเดตกระสุน
         for bullet in self.bullets[:]:
             bullet.move()
             if bullet.x > self.width:
                 self.remove_widget(bullet)
                 self.bullets.remove(bullet)
 
-        # อัปเดตสิ่งกีดขวางและบอส
         for obstacle in self.obstacles[:]:
             obstacle.move()
             if obstacle.x < -obstacle.width:
@@ -117,13 +157,22 @@ class DinoGame(Widget):
                     break
 
             if self.dino.collide_widget(obstacle):
-                self.game_over()
+                if self.shield_active:
+                    self.shield_active = False
+                else:
+                    self.health -= 1
+                    if self.health <= 0:
+                        self.game_over()
 
-        # ไปด่านต่อไปหรือเพิ่มศัตรู
+        for power_up in self.power_ups[:]:
+            if self.dino.collide_widget(power_up):
+                self.collect_power_up(power_up)
+
         if self.obstacles_cleared >= self.obstacles_to_clear:
             self.next_stage()
         elif len(self.obstacles) < 3 and random.random() < self.spawn_frequency:
             self.spawn_obstacle()
+        self.spawn_power_up()
 
     def next_stage(self):
         self.stage += 1
@@ -132,7 +181,7 @@ class DinoGame(Widget):
         if self.stage <= 5:
             self.spawn_obstacle()
         else:
-            self.game_active = False  # ชนะเกม
+            self.game_active = False
 
     def game_over(self):
         self.game_active = False
@@ -140,8 +189,11 @@ class DinoGame(Widget):
             self.remove_widget(obstacle)
         for bullet in self.bullets:
             self.remove_widget(bullet)
+        for power_up in self.power_ups:
+            self.remove_widget(power_up)
         self.obstacles.clear()
         self.bullets.clear()
+        self.power_ups.clear()
         Clock.unschedule(self.update)
 
     def restart(self):
@@ -149,8 +201,12 @@ class DinoGame(Widget):
         self.score = 0
         self.stage = 1
         self.obstacles_cleared = 0
+        self.health = 3
+        self.shield_active = False
+        self.shoot_cooldown = 0.5
         self.obstacles.clear()
         self.bullets.clear()
-        self.last_shot_time = 0  # รีเซ็ตเวลา cooldown
+        self.power_ups.clear()
+        self.last_shot_time = 0
         self.spawn_obstacle()
         Clock.schedule_interval(self.update, 1.0 / 60.0)

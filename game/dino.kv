@@ -4,7 +4,7 @@
     size: 50, 50
     canvas:
         Rectangle:
-            source: 'dino.jpg'  # ไดโนเสาร์ Google
+            source: 'dino.jpg'
             pos: self.pos
             size: self.size
 
@@ -12,7 +12,15 @@
     size: 30, 50
     canvas:
         Rectangle:
-            source: 'gunman.jpg'  # เปลี่ยนเป็นคนครมีปืน (ถ้ามีภาพ)
+            source: 'gunman.jpg'
+            pos: self.pos
+            size: self.size
+
+<Boss>:
+    size: 60, 80
+    canvas:
+        Rectangle:
+            source: 'boss.jpg'
             pos: self.pos
             size: self.size
 
@@ -25,19 +33,64 @@
             pos: self.pos
             size: self.size
 
+<SpeedPowerUp>:
+    size: 30, 30
+    canvas:
+        Color:
+            rgba: 1, 1, 0, 1  # สีเหลือง
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<ShieldPowerUp>:
+    size: 30, 30
+    canvas:
+        Color:
+            rgba: 0, 1, 1, 1  # สีฟ้า
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<AmmoPowerUp>:
+    size: 30, 30
+    canvas:
+        Color:
+            rgba: 1, 0, 1, 1  # สีม่วง
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<HealthPowerUp>:
+    size: 30, 30
+    canvas:
+        Color:
+            rgba: 1, 0, 0, 1  # สีแดง
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<ScorePowerUp>:
+    size: 30, 30
+    canvas:
+        Color:
+            rgba: 0, 1, 0, 1  # สีเขียว
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
 <DinoGame>:
     dino: dino
     canvas.before:
         Rectangle:
             pos: self.pos
             size: self.size
-            source: 'nakhon_background.jpg'  # พื้นหลังนครศรีธรรมราช
+            source: 'nakhon_background.jpg'
     Dino:
         id: dino
         x: 50
         y: 0
     Label:
-        text: f'Stage: {root.stage} Score: {root.score}'  # แสดงด่านและคะแนน
+        text: f'Stage: {root.stage} Score: {root.score} Health: {root.health}'
         font_size: 20
         top: root.top - 10
         right: root.right - 10
@@ -52,11 +105,3 @@
         opacity: 0 if root.game_active else 1
         disabled: root.game_active
         on_press: root.restart()
-
-<Boss>:
-    size: 60, 80  # บอสใหญ่ขึ้น
-    canvas:
-        Rectangle:
-            source: 'boss.jpg'  # ภาพบอส (เช่น หัวหน้านักรบ)
-            pos: self.pos
-            size: self.size
