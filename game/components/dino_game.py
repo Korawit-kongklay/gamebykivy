@@ -78,7 +78,7 @@ class DinoGame(Widget):
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):  # ฟังก์ชันจัดการเมื่อกดปุ่ม
         if keycode[1] == 'spacebar' and self.dino.y == 0:  # ถ้ากด Spacebar และไดโนอยู่ที่พื้น
-            self.dino.velocity_y = 10  # ทำให้ไดโนกระโดด
+            self.dino.velocity_y = 5  # ทำให้ไดโนกระโดด
         return True  # บอกว่ารับคำสั่งเรียบร้อย
 
     def _on_mouse_pos(self, window, pos):  # ฟังก์ชันอัปเดตตำแหน่งเคอร์เซอร์ (แก้ชื่อจาก on_cursor_pos)

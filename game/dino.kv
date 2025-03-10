@@ -27,11 +27,16 @@
 <Bullet>:
     size: 20, 5
     canvas:
+        PushMatrix
+        Rotate:
+            angle: self.bullet_rotation  # ต้องเพิ่ม property bullet_rotation ใน Python class
+            origin: self.center
         Color:
-            rgba: 0, 0, 1, 1  # สีน้ำเงิน
+            rgba: 1, 1, 0, 1 #สีเหลือง
         Rectangle:
             pos: self.pos
             size: self.size
+        PopMatrix
 
 <BossBullet>:
     size: 15, 15
