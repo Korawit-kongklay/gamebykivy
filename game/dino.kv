@@ -4,7 +4,7 @@
     size: 50, 50
     canvas:
         Rectangle:
-            source: 'dino.jpg'
+            source: 'dino.jpg'  # ไดโนเสาร์ Google
             pos: self.pos
             size: self.size
 
@@ -12,15 +12,15 @@
     size: 30, 50
     canvas:
         Rectangle:
-            source: 'gunman.jpg'
+            source: 'gunman.jpg'  # คนครมีปืน
             pos: self.pos
             size: self.size
 
 <Boss>:
-    size: 60, 80
+    size: 60, 80  # บอสใหญ่ขึ้น
     canvas:
         Rectangle:
-            source: 'boss.jpg'
+            source: 'boss.jpg'  # หัวหน้านักรบ
             pos: self.pos
             size: self.size
 
@@ -28,8 +28,17 @@
     size: 20, 5
     canvas:
         Color:
-            rgba: 0, 0, 1, 1
+            rgba: 0, 0, 1, 1  # สีน้ำเงิน
         Rectangle:
+            pos: self.pos
+            size: self.size
+
+<BossBullet>:
+    size: 15, 15
+    canvas:
+        Color:
+            rgba: 1, 0, 0, 1  # สีแดง
+        Ellipse:
             pos: self.pos
             size: self.size
 
@@ -84,13 +93,13 @@
         Rectangle:
             pos: self.pos
             size: self.size
-            source: 'nakhon_background.jpg'
+            source: 'nakhon_background.jpg'  # พื้นหลังนครศรีธรรมราช
     Dino:
         id: dino
         x: 50
         y: 0
     Label:
-        text: f'Stage: {root.stage} Score: {root.score} Health: {root.health}'
+        text: f'Stage: {root.stage} Score: {root.score}'  # แสดงด่านและคะแนน (ไม่แสดงหัวใจ)
         font_size: 20
         top: root.top - 10
         right: root.right - 10
