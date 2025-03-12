@@ -1,11 +1,15 @@
 from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty, ObjectProperty
+from kivy.properties import NumericProperty, ObjectProperty, ReferenceListProperty
+from kivy.vector import Vector
 from kivy.clock import Clock
 from .gif_loader import GifLoader
+from kivy.core.window import Window
 
 class Enemy(Widget):
     texture = ObjectProperty(None)
     velocity_x = NumericProperty(-3)
+    velocity_y = NumericProperty(0)
+    velocity = ReferenceListProperty(velocity_x, velocity_y)
 
     def __init__(self, gif_path: str = 'assets/gifs/jacko.gif', size: tuple = (80, 80), **kwargs):
         super().__init__(**kwargs)
@@ -23,4 +27,14 @@ class Enemy(Widget):
         self.canvas.ask_update()
 
     def move(self) -> None:
-        self.x += self.velocity_x
+        self.velocity_y -= 0.10  # Apply gravity
+        self.pos = Vector(*self.velocity) + self.pos
+        # Boundary checking
+        self.x = max(0, min(self.x, Window.width - self.width))
+        if self.y <= 0:
+            self.y = 0
+            self.velocity_y = 0
+
+    def on_pos(self, *args):
+        # Check collision with platforms (called by Stage)
+        pass

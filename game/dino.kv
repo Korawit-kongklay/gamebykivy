@@ -93,12 +93,13 @@
             size: self.size
 
 <DinoGame>:
+    size: root.size
     dino: dino
     canvas.before:
         Rectangle:
             pos: self.pos
             size: self.size
-            source: 'assets/gifs/darkforest.gif'  # Background
+            source: 'assets/gifs/darkforest.gif'
     Dino:
         id: dino
         x: 50
