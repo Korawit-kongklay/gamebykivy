@@ -16,7 +16,7 @@ class Dino(Widget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.frames = self.load_gif_frames('ufopug.gif')
+        self.frames = self.load_gif_frames('assets/gifs/ufopug.gif')
         self.current_frame = 0
         self.frame_count = len(self.frames)
         # Store original frames (unflipped)
