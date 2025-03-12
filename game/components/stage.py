@@ -1,11 +1,9 @@
-# stage.py (full updated version)
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, ObjectProperty
 from kivy.clock import Clock
 import random
 from .obstacle import Obstacle
 from .platform import Platform
-#from .powerup import SpeedPowerUp, ShieldPowerUp, AmmoPowerUp, HealthPowerUp, ScorePowerUp
 
 class Stage(Widget):
     stage_number = NumericProperty(1)
@@ -20,14 +18,8 @@ class Stage(Widget):
         self.stage_number = stage_number
         self.obstacles_to_clear = 10 + (stage_number - 1) * 5
         self.spawn_platforms()
-        self.bind(size=self._check_size_and_spawn)  # Bind to size changes
+        Clock.schedule_once(self.spawn_obstacles, 0.1)
         Clock.schedule_interval(self.update, 1.0 / 60.0)
-
-    def _check_size_and_spawn(self, instance, value):
-        """Spawn obstacles once size is valid."""
-        if self.height >= 100:  # Ensure height is reasonable (e.g., > obstacle.height + 50)
-            self.unbind(size=self._check_size_and_spawn)  # Unbind after spawning
-            self.spawn_obstacles()
 
     def spawn_platforms(self):
         if self.stage_number == 1:
@@ -56,7 +48,7 @@ class Stage(Widget):
             self.add_widget(platform)
             self.platforms.append(platform)
 
-    def spawn_obstacles(self):
+    def spawn_obstacles(self, dt=None):
         for _ in range(self.obstacles_to_clear):
             obstacle = Obstacle()
             obstacle.x = self.width + random.randint(0, 300)
@@ -64,16 +56,6 @@ class Stage(Widget):
             self.add_widget(obstacle)
             self.obstacles.append(obstacle)
 
-#    def spawn_power_up(self):
-#        spawn_chance = 0.01 if self.stage_number == 1 else 0.015
-#        if random.random() < spawn_chance:
-#            power_up_types = [SpeedPowerUp, ShieldPowerUp, AmmoPowerUp, HealthPowerUp, ScorePowerUp]
-#            power_up = random.choice(power_up_types)()
-#            power_up.x = self.width + random.randint(0, 300)
-#            power_up.y = random.randint(50, max(50, self.height - power_up.height))
-#            self.add_widget(power_up)
-#            self.power_ups.append(power_up)
-            
     def update(self, dt):
         for obstacle in self.obstacles[:]:
             obstacle.move()
@@ -81,7 +63,7 @@ class Stage(Widget):
             for platform in self.platforms:
                 if (obstacle.collide_widget(platform) and 
                     obstacle.y > platform.y and 
-                    obstacle.bottom <= platform.top + 5):
+                    obstacle.y <= platform.top + 5):  # Use obstacle.y instead of bottom
                     obstacle.y = platform.top
                     obstacle.velocity_y = 0
                     on_platform = True
@@ -99,7 +81,8 @@ class Stage(Widget):
                 self.remove_widget(power_up)
                 self.power_ups.remove(power_up)
 
-#        self.spawn_power_up()
+        if not self.obstacles and self.obstacles_cleared < self.obstacles_to_clear:
+            self.spawn_obstacles()
 
         if self.obstacles_cleared >= self.obstacles_to_clear:
             self.next_stage()
