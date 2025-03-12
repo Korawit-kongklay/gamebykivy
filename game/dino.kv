@@ -1,12 +1,12 @@
 #:kivy 2.0.0
 
 <Dino>:
-    size: 50, 50
+    size: 80, 80
     canvas:
         Rectangle:
-            source: 'dino.jpg'  # ไดโนเสาร์ Google
             pos: self.pos
             size: self.size
+            texture: self.texture  # Bind to the texture property
 
 <Obstacle>:
     size: 30, 50
