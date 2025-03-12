@@ -65,6 +65,7 @@ class DinoGame(Widget):
         super().__init__(**kwargs)
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)  # ขอคีย์บอร์ดจากระบบ
         self._keyboard.bind(on_key_down=self._on_keyboard_down)  # ผูกปุ่มกดกับฟังก์ชัน
+        self._keyboard.bind(on_key_up=self._on_keyboard_up)
         Window.bind(mouse_pos=self._on_mouse_pos)  # ผูกตำแหน่งเคอร์เซอร์เมาส์ (แก้จาก on_cursor_pos)
         Window.bind(on_mouse_down=self._on_mouse_down)  # ผูกการคลิกเมาส์
         self.mouse_pos = (0, 0)  # เก็บตำแหน่งเคอร์เซอร์เริ่มต้น (เปลี่ยนชื่อเป็น mouse_pos)
@@ -76,10 +77,19 @@ class DinoGame(Widget):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)  # ยกเลิกการผูกปุ่มกด
         self._keyboard = None  # ล้างตัวแปรคีย์บอร์ด
 
-    def _on_keyboard_down(self, keyboard, keycode, text, modifiers):  # ฟังก์ชันจัดการเมื่อกดปุ่ม
-        if keycode[1] == 'spacebar' and self.dino.y == 0:  # ถ้ากด Spacebar และไดโนอยู่ที่พื้น
-            self.dino.velocity_y = 5  # ทำให้ไดโนกระโดด
-        return True  # บอกว่ารับคำสั่งเรียบร้อย
+    def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        if keycode[1] == 'spacebar' and self.dino.y == 0:
+            self.dino.velocity_y = 5
+        elif keycode[1] == 'left' or keycode[1] == 'a':
+            self.dino.velocity_x = -3
+        elif keycode[1] == 'right' or keycode[1] == 'd':
+            self.dino.velocity_x = 3
+        return True
+    
+    def _on_keyboard_up(self, keyboard, keycode):
+        if keycode[1] in ('left', 'a', 'right', 'd'):
+            self.dino.velocity_x = 0
+        return True
 
     def _on_mouse_pos(self, window, pos):  # ฟังก์ชันอัปเดตตำแหน่งเคอร์เซอร์ (แก้ชื่อจาก on_cursor_pos)
         self.mouse_pos = pos  # บันทึกตำแหน่งเคอร์เซอร์ปัจจุบัน
