@@ -1,5 +1,4 @@
-from kivy.uix.widget import Widget
+from .enemy import Enemy
 
-class Obstacle(Widget):
-    def move(self):
-        self.x -= 3  # ความเร็วสิ่งกีดขวาง
+class Obstacle(Enemy):
+    pass

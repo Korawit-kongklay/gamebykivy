@@ -1,38 +1,38 @@
 #:kivy 2.0.0
 
-<Dino>:
+<Character>:
     size: 80, 80
     canvas:
         Rectangle:
             pos: self.pos
             size: self.size
-            texture: self.texture  # Bind to the texture property
+            texture: self.texture
 
 <Obstacle>:
-    size: 30, 50
+    size: 50, 50
     canvas:
         Rectangle:
-            source: 'assets/images/gunman.jpg'  # คนครมีปืน
             pos: self.pos
             size: self.size
+            texture: self.texture
 
 <Boss>:
-    size: 60, 80  # บอสใหญ่ขึ้น
+    size: 60, 80
     canvas:
         Rectangle:
-            source: 'boss.jpg'  # หัวหน้านักรบ
             pos: self.pos
             size: self.size
+            texture: self.texture
 
 <Bullet>:
     size: 20, 5
     canvas:
         PushMatrix
         Rotate:
-            angle: self.bullet_rotation  # ต้องเพิ่ม property bullet_rotation ใน Python class
+            angle: self.bullet_rotation
             origin: self.center
         Color:
-            rgba: 1, 1, 0, 1 #สีเหลือง
+            rgba: 1, 1, 0, 1  # Yellow
         Rectangle:
             pos: self.pos
             size: self.size
@@ -42,7 +42,7 @@
     size: 15, 15
     canvas:
         Color:
-            rgba: 1, 0, 0, 1  # สีแดง
+            rgba: 1, 0, 0, 1  # Red
         Ellipse:
             pos: self.pos
             size: self.size
@@ -51,7 +51,7 @@
     size: 30, 30
     canvas:
         Color:
-            rgba: 1, 1, 0, 1  # สีเหลือง
+            rgba: 1, 1, 0, 1  # Yellow
         Ellipse:
             pos: self.pos
             size: self.size
@@ -60,7 +60,7 @@
     size: 30, 30
     canvas:
         Color:
-            rgba: 0, 1, 1, 1  # สีฟ้า
+            rgba: 0, 1, 1, 1  # Cyan
         Ellipse:
             pos: self.pos
             size: self.size
@@ -69,7 +69,7 @@
     size: 30, 30
     canvas:
         Color:
-            rgba: 1, 0, 1, 1  # สีม่วง
+            rgba: 1, 0, 1, 1  # Magenta
         Ellipse:
             pos: self.pos
             size: self.size
@@ -78,7 +78,7 @@
     size: 30, 30
     canvas:
         Color:
-            rgba: 1, 0, 0, 1  # สีแดง
+            rgba: 1, 0, 0, 1  # Red
         Ellipse:
             pos: self.pos
             size: self.size
@@ -87,7 +87,7 @@
     size: 30, 30
     canvas:
         Color:
-            rgba: 0, 1, 0, 1  # สีเขียว
+            rgba: 0, 1, 0, 1  # Green
         Ellipse:
             pos: self.pos
             size: self.size
@@ -98,18 +98,18 @@
         Rectangle:
             pos: self.pos
             size: self.size
-            source: 'assets/gifs/darkforest.gif'  # พื้นหลังนครศรีธรรมราช
+            source: 'assets/gifs/darkforest.gif'  # Background
     Dino:
         id: dino
         x: 50
         y: 0
     Label:
-        text: f'Stage: {root.stage} Score: {root.score}'  # แสดงด่านและคะแนน (ไม่แสดงหัวใจ)
+        text: f'Stage: {root.stage_number} Score: {root.score}'
         font_size: 20
         top: root.top - 10
         right: root.right - 10
     Label:
-        text: f'Game Over! Score: {root.score}' if not root.game_active and root.stage <= 5 else 'Back to Google!' if root.stage > 5 else ''
+        text: f'Game Over! Score: {root.score}' if not root.game_active and root.stage_number <= 5 else 'Back to Google!' if root.stage_number > 5 else ''
         font_size: 40
         center: root.center
     Button:
