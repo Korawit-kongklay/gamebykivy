@@ -1,7 +1,6 @@
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
-from kivy.app import App
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -15,13 +14,15 @@ from .attack import ProjectileAttack
 from .portal import Portal
 import random  # For random positioning
 from components.music_manager import MusicManager
+from kivy.app import App
+
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
     portal = ObjectProperty(None, allownone=True)
     player = ObjectProperty(None)
     stage = ObjectProperty(None)
-    boss = ObjectProperty(None)
+    boss = ObjectProperty(None, allownone=True)  # เพิ่ม allownone=True
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
     player_health = NumericProperty(20)  # Player starts with 20 HP (10 hearts)
@@ -35,7 +36,7 @@ class Game(Widget):
     ENABLE_PLAYER = True
     ENABLE_ENEMIES = True
     ENABLE_ATTACKS = True
-    ENABLE_BOSS = False
+    ENABLE_BOSS = True  # Enable boss for Stage 5
     MAX_STAGES = 5  # Maximum number of stages
 
     def __init__(self, initial_player_hp=20, **kwargs):
@@ -47,8 +48,6 @@ class Game(Widget):
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
-        if self.ENABLE_BOSS:
-            Clock.schedule_interval(self.spawn_boss_check, 5.0)
         self.music_manager.play_music(self.stage_number)
 
     def _initial_update(self, dt):
@@ -75,8 +74,6 @@ class Game(Widget):
                 print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
-        self.boss_attack_cooldown = 2.0
-        self.last_boss_attack = 0
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
@@ -85,6 +82,9 @@ class Game(Widget):
         self.hp_layout = self.ids.hp_layout  # Access BoxLayout via id
         self.hp_layout.bind(pos=self._update_hp_position)  # Bind pos to update hearts
         self.update_hp_hearts()  # Set up initial heart display
+        # Spawn boss if in Stage 5
+        if self.stage_number == 5 and self.ENABLE_BOSS and not self.boss:
+            self.spawn_boss()
 
     def spawn_initial_enemies(self):
         """Spawn initial enemies at random positions based on stage number."""
@@ -97,6 +97,14 @@ class Game(Widget):
             enemy = Enemy(pos=(spawn_x, spawn_y))
             self.stage.add_widget(enemy)
             self.stage.obstacles.append(enemy)
+
+    def spawn_boss(self):
+        """Spawn the boss in Stage 5."""
+        print("Spawning Boss in Stage 5!")
+        self.boss = Boss(pos=(Window.width - 60, 0))
+        self.add_widget(self.boss)
+        self.boss.velocity_x = -1
+        self.music_manager.play_spawn()  # Play spawn sound for boss
 
     def spawn_portal(self):
         """Spawn or reposition the portal at the last enemy death position."""
@@ -127,7 +135,7 @@ class Game(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active:
             return False
-        if keycode[1] == 'escape':  # เพิ่มการจัดการ ESC
+        if keycode[1] == 'escape':  # Pause game with ESC
             self.game_active = False
             self.show_pause_menu()
             return True
@@ -171,15 +179,6 @@ class Game(Widget):
         self.player_attacks.append(attack)
         self.last_attack_time = Clock.get_time()
         self.music_manager.play_shoot()  # Play shoot sound
-
-    def spawn_boss_check(self, dt):
-        if not self.ENABLE_BOSS or not self.game_active:
-            return
-        if not self.boss and self.score >= 10:
-            self.boss = Boss(pos=(Window.width - 60, 0))
-            self.add_widget(self.boss)
-            self.boss.velocity_x = -1
-            self.music_manager.play_spawn()  # Play spawn sound for boss
 
     def on_player_health_changed(self, instance, value):
         """Callback to update UI when player health changes."""
@@ -225,13 +224,12 @@ class Game(Widget):
         if self.boss:
             self.apply_gravity(self.boss)
             self.boss.move()
+            self.boss.update(self, dt)  # Update boss skills
             self.handle_platform_collision(self.boss)
             if self.boss.x < 0:
                 self.boss.x = 0
-            current_time = Clock.get_time()
-            if current_time - self.last_boss_attack >= self.boss_attack_cooldown:
-                self.boss.shoot(self)
-                self.last_boss_attack = current_time
+            if self.boss.health <= 0 and not self.portal:
+                self.spawn_portal()  # Spawn portal when boss dies
             if self.debug_hitbox:
                 self.boss.update_hitbox_debug()
 
@@ -286,6 +284,9 @@ class Game(Widget):
             self.player.velocity_y = 0
         self.update_hp_hearts()
         self.music_manager.play_music(self.stage_number)
+        # Spawn boss if in Stage 5
+        if self.stage_number == 5 and self.ENABLE_BOSS and not self.boss:
+            self.spawn_boss()
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -340,43 +341,90 @@ class Game(Widget):
         return on_platform
 
     def update_attacks(self):
+        # Step 1: Update player attacks and check collisions with enemies and boss
         for attack in self.player_attacks[:]:
             attack.move()
+            attack_rect = attack.get_hitbox_rect()
+            print(f"Player attack at: {attack_rect}")  # Debug: Print attack position
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
-                self.remove_widget(attack)
-                self.player_attacks.remove(attack)
-            else:
-                attack_rect = attack.get_hitbox_rect()
-                if self.boss and Hitbox.collide(attack_rect, self.boss.get_hitbox_rect()):
-                    self.boss.health -= 1
+                try:
                     self.remove_widget(attack)
                     self.player_attacks.remove(attack)
+                except Exception as e:
+                    print(f"Error removing player attack: {e}")
+            else:
+                if self.boss and Hitbox.collide(attack_rect, self.boss.get_hitbox_rect()):
+                    self.boss.health -= 1
+                    try:
+                        self.remove_widget(attack)
+                        self.player_attacks.remove(attack)
+                    except Exception as e:
+                        print(f"Error removing player attack: {e}")
                     if self.boss.health <= 0:
-                        self.remove_widget(self.boss)
-                        self.boss = None
-                        self.score += 50
+                        try:
+                            self.remove_widget(self.boss)
+                            self.boss = None
+                            self.score += 50
+                        except Exception as e:
+                            print(f"Error removing boss: {e}")
                 elif self.ENABLE_ENEMIES:
                     for enemy in self.stage.obstacles[:]:
                         enemy_rect = enemy.get_hitbox_rect()
                         if Hitbox.collide(attack_rect, enemy_rect):
                             enemy.take_damage(100)
-                            self.remove_widget(attack)
-                            self.player_attacks.remove(attack)
+                            try:
+                                self.remove_widget(attack)
+                                self.player_attacks.remove(attack)
+                            except Exception as e:
+                                print(f"Error removing player attack: {e}")
                             if enemy.health <= 0:
                                 self.score += 100
                                 self.last_enemy_death_pos = [enemy.x, enemy.y]
                                 print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
                             break
 
+        # Step 2: Update enemy attacks and check collisions with player
         for attack in self.enemy_attacks[:]:
             attack.move()
+            attack_rect = attack.get_hitbox_rect()
+            print(f"Enemy attack at: {attack_rect}")  # Debug: Print attack position
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
-                self.remove_widget(attack)
-                self.enemy_attacks.remove(attack)
-            elif Hitbox.collide(attack.get_hitbox_rect(), self.player.get_hitbox_rect()):
+                try:
+                    self.remove_widget(attack)
+                    self.enemy_attacks.remove(attack)
+                except Exception as e:
+                    print(f"Error removing enemy attack: {e}")
+            elif Hitbox.collide(attack_rect, self.player.get_hitbox_rect()):
                 self.player.take_damage(1)
-                self.remove_widget(attack)
-                self.enemy_attacks.remove(attack)
+                try:
+                    self.remove_widget(attack)
+                    self.enemy_attacks.remove(attack)
+                except Exception as e:
+                    print(f"Error removing enemy attack: {e}")
+
+        # Step 3: Check collisions between player attacks and enemy attacks
+        collisions = []
+        for player_attack in self.player_attacks[:]:
+            player_attack_rect = player_attack.get_hitbox_rect()
+            for enemy_attack in self.enemy_attacks[:]:
+                enemy_attack_rect = enemy_attack.get_hitbox_rect()
+                if Hitbox.collide(player_attack_rect, enemy_attack_rect):
+                    collisions.append((player_attack, enemy_attack))
+                    print(f"Collision detected: Player attack {player_attack_rect} vs Enemy attack {enemy_attack_rect}")
+                    break  # Exit inner loop after finding a collision for this player attack
+
+        # Process all collisions
+        for player_attack, enemy_attack in collisions:
+            try:
+                if player_attack in self.player_attacks:
+                    self.remove_widget(player_attack)
+                    self.player_attacks.remove(player_attack)
+                if enemy_attack in self.enemy_attacks:
+                    self.remove_widget(enemy_attack)
+                    self.enemy_attacks.remove(enemy_attack)
+                print("Player projectile collided with enemy projectile! Both destroyed.")
+            except Exception as e:
+                print(f"Error handling collision: {e}")
 
     def update_enemies(self):
         for enemy in self.stage.obstacles[:]:
@@ -436,5 +484,5 @@ class Game(Widget):
         from .pause_menu import PauseMenu
         app = App.get_running_app()
         app.root.clear_widgets()
-        pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
-        app.root.add_widget(pause_menu)   
+        pause_menu = PauseMenu(self)  # Pass Game instance to PauseMenu
+        app.root.add_widget(pause_menu)
