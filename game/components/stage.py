@@ -23,11 +23,31 @@ class Stage(Widget):
     def spawn_platforms(self):
         """Spawn platforms with predefined positions for each stage."""
         platform_configs = {
-    1: [  # Stage 1: Simple layout with a few platforms
-        (200, 100),  # Middle-left platform (200 - 100 = 100)
-        (400, 150),  # Middle-right platform (250 - 100 = 150)
-        (600, 100),  # Far-right platform (200 - 100 = 100)
-        (300, 250),  # Upper-middle platform (350 - 100 = 250)
+    1: [  # Stage 1: Adjusted to match the image with ~21 platforms
+        (200, 100),
+        (293, 100),  
+        (400, 150),  
+        (600, 100),
+        (693, 76),  
+        (300, 250),
+        (393, 274),  
+        (486, 298),
+        (765, 298),
+        (858, 274),  
+        (700, 500),
+        (607, 500),
+        (514, 500),
+        (421, 500),   
+        (0, 400),
+        (93, 400),
+        (186, 424),
+        (1187, 576),
+        (1187, 176),
+        (1094, 152),
+        (1001, 128),
+        (1094, 552),
+        (1001, 528),
+        (908, 528),
     ],
     2: [  # Stage 2: More platforms, some vertical progression
         (150, 0),    # Lower-left (100 - 100 = 0)
