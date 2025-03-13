@@ -1,22 +1,14 @@
-from .obstacle import Obstacle
-from .bullet import Bullet
+from .enemy import Enemy
+from .bullet import BossBullet
 from kivy.properties import NumericProperty
 
-class BossBullet(Bullet):
-    def __init__(self, **kwargs):
-        super().__init__(start_pos=(0, 0), target_pos=(-1, 0), speed=5, **kwargs)
-
-    def move(self) -> None:
-        self.x -= 5  # Fixed speed to left
-
-class Boss(Obstacle):
+class Boss(Enemy):
     health = NumericProperty(3)
 
     def __init__(self, **kwargs):
-        super().__init__(velocity_x=-1, **kwargs)  # Slower than regular enemies
+        super().__init__(gif_path='assets/gifs/jacko.gif', size=(60, 80), velocity_x=-1, **kwargs)
 
-    def shoot(self, game) -> None:
-        bullet = BossBullet()
-        bullet.pos = (self.x - bullet.width, self.y + self.height / 2)
+    def shoot(self, game):
+        bullet = BossBullet(start_pos=(self.x - 15, self.y + self.height / 2))
         game.add_widget(bullet)
         game.boss_bullets.append(bullet)

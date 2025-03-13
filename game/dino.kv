@@ -1,23 +1,13 @@
 #:kivy 2.0.0
 
 <Character>:
-    size: 80, 80
     canvas:
         Rectangle:
             pos: self.pos
             size: self.size
             texture: self.texture
 
-<Obstacle>:
-    size: 50, 50
-    canvas:
-        Rectangle:
-            pos: self.pos
-            size: self.size
-            texture: self.texture
-
-<Boss>:
-    size: 60, 80
+<Platform>:
     canvas:
         Rectangle:
             pos: self.pos
@@ -25,94 +15,30 @@
             texture: self.texture
 
 <Bullet>:
-    size: 20, 5
     canvas:
         PushMatrix
         Rotate:
             angle: self.bullet_rotation
             origin: self.center
         Color:
-            rgba: 1, 1, 0, 1  # Yellow
+            rgba: 1, 1, 0, 1
         Rectangle:
             pos: self.pos
             size: self.size
         PopMatrix
 
-<BossBullet>:
-    size: 15, 15
-    canvas:
-        Color:
-            rgba: 1, 0, 0, 1  # Red
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<SpeedPowerUp>:
-    size: 30, 30
-    canvas:
-        Color:
-            rgba: 1, 1, 0, 1  # Yellow
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<ShieldPowerUp>:
-    size: 30, 30
-    canvas:
-        Color:
-            rgba: 0, 1, 1, 1  # Cyan
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<AmmoPowerUp>:
-    size: 30, 30
-    canvas:
-        Color:
-            rgba: 1, 0, 1, 1  # Magenta
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<HealthPowerUp>:
-    size: 30, 30
-    canvas:
-        Color:
-            rgba: 1, 0, 0, 1  # Red
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
-<ScorePowerUp>:
-    size: 30, 30
-    canvas:
-        Color:
-            rgba: 0, 1, 0, 1  # Green
-        Ellipse:
-            pos: self.pos
-            size: self.size
-
 <DinoGame>:
     size: root.size
-    dino: dino
     canvas.before:
         Rectangle:
             pos: self.pos
             size: self.size
             source: 'assets/gifs/darkforest.gif'
-    Dino:
-        id: dino
-        x: 50
-        y: 0
     Label:
         text: f'Stage: {root.stage_number} Score: {root.score}'
         font_size: 20
         top: root.top - 10
         right: root.right - 10
-    Label:
-        text: f'Game Over! Score: {root.score}' if not root.game_active and root.stage_number <= 5 else 'Back to Google!' if root.stage_number > 5 else ''
-        font_size: 40
-        center: root.center
     Button:
         text: 'Restart'
         size_hint: 0.2, 0.1

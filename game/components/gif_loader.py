@@ -8,20 +8,17 @@ class GifLoader:
     def load_gif_frames(gif_path: str) -> List[Image.Image]:
         if not os.path.exists(gif_path):
             raise FileNotFoundError(f"GIF file not found: {gif_path}")
-        try:
-            with Image.open(gif_path) as gif:
-                if not gif.is_animated:
-                    raise ValueError(f"File {gif_path} is not an animated GIF")
-                frames = []
-                for frame in range(gif.n_frames):
-                    gif.seek(frame)
-                    rgba_frame = gif.convert('RGBA').rotate(-180, expand=True)
-                    if rgba_frame.width <= 0 or rgba_frame.height <= 0:
-                        raise ValueError(f"Invalid frame dimensions in {gif_path}: {rgba_frame.size}")
-                    frames.append(rgba_frame)
-                return frames
-        except Exception as e:
-            raise ValueError(f"Failed to load GIF {gif_path}: {str(e)}")
+        with Image.open(gif_path) as gif:
+            if not gif.is_animated:
+                raise ValueError(f"File {gif_path} is not an animated GIF")
+            frames = []
+            for frame in range(gif.n_frames):
+                gif.seek(frame)
+                rgba_frame = gif.convert('RGBA').rotate(-180, expand=True)
+                if rgba_frame.width <= 0 or rgba_frame.height <= 0:
+                    raise ValueError(f"Invalid frame dimensions in {gif_path}: {rgba_frame.size}")
+                frames.append(rgba_frame)
+            return frames
 
     @staticmethod
     def create_textures(frames: List[Image.Image]) -> List[Texture]:

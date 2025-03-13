@@ -1,4 +1,4 @@
-from .bullet import Bullet
+from .bullet import BaseBullet, PlayerBullet, BossBullet
 from .character import Character
 from .dino import Dino
 from .enemy import Enemy
