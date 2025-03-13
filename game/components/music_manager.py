@@ -36,7 +36,7 @@ class MusicManager:
 
     def play_music(self, stage_number):
         """Play the appropriate background music based on stage number."""
-        if stage_number < 3:
+        if stage_number < 5:
             new_music = self.background_music
         else:
             new_music = self.stage_100_music
