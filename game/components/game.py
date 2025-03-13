@@ -6,7 +6,7 @@ from .player import Player
 from .stage import Stage
 from .hitbox import Hitbox
 from .boss import Boss
-
+from .enemy import Enemy
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -18,13 +18,12 @@ class Game(Widget):
     stage_number = NumericProperty(1)
     health = NumericProperty(3)
     game_active = BooleanProperty(True)
-    player_attacks = ListProperty([])  # Player-initiated attacks
-    enemy_attacks = ListProperty([])  # Enemy-initiated attacks
-    debug_hitbox = BooleanProperty(False)  # Toggle for hitbox debugging
+    player_attacks = ListProperty([])
+    enemy_attacks = ListProperty([])
+    debug_hitbox = BooleanProperty(False)
 
-    # Game feature toggles
     ENABLE_PLAYER = True
-    ENABLE_OBSTACLES = False
+    ENABLE_ENEMIES = True
     ENABLE_ATTACKS = True
     ENABLE_BOSS = False
 
@@ -32,18 +31,23 @@ class Game(Widget):
         super().__init__(**kwargs)
         self.initialize_game()
         self.bind_inputs()
-        # Schedule updates
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
             Clock.schedule_interval(self.spawn_boss_check, 5.0)
 
     def initialize_game(self):
         """Initialize the game state and entities."""
-        self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_OBSTACLES)
+        self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
+        if self.ENABLE_ENEMIES:
+            self.stage.spawn_obstacles()  # Spawn enemies immediately
         if self.ENABLE_PLAYER:
             self.player = Player(pos=(100, 0))
             self.add_widget(self.player)
+            # Set player as target for all enemies
+            for enemy in self.stage.obstacles:
+                enemy.target = self.player
+                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
@@ -51,7 +55,7 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.health = 3
-        self.on_platform = False  # Track if player is on a platform
+        self.on_platform = False
 
     def bind_inputs(self):
         """Bind keyboard and mouse inputs for player control."""
@@ -62,21 +66,16 @@ class Game(Widget):
             Window.bind(on_mouse_down=self._on_mouse_down)
 
     def _keyboard_closed(self):
-        """Handle keyboard closure."""
         self.keyboard.unbind(on_key_down=self._on_keyboard_down, on_key_up=self._on_keyboard_up)
         self.keyboard = None
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
-        """Handle key press events."""
         if not self.game_active:
             return False
-
-        # Toggle hitbox debugging with 'H' key
         if keycode[1] == 'h':
             self.debug_hitbox = not self.debug_hitbox
             self.update_hitbox_visibility()
             return True
-
         if not self.ENABLE_PLAYER or not self.player:
             return False
         if keycode[1] == 'spacebar':
@@ -89,17 +88,14 @@ class Game(Widget):
         return True
 
     def _on_keyboard_up(self, keyboard, keycode):
-        """Handle key release events."""
         if self.ENABLE_PLAYER and self.player and keycode[1] in ('left', 'a', 'right', 'd'):
             self.player.velocity_x = 0
         return True
 
     def _on_mouse_pos(self, window, pos):
-        """Track mouse position."""
         self.mouse_pos = pos
 
     def _on_mouse_down(self, window, x, y, button, modifiers):
-        """Handle mouse click events for attacks."""
         from .attack import ProjectileAttack
         if button != 'left' or not self.game_active or (Clock.get_time() - self.last_attack_time < self.attack_cooldown):
             return
@@ -110,7 +106,6 @@ class Game(Widget):
         self.last_attack_time = Clock.get_time()
 
     def spawn_boss_check(self, dt):
-        """Check if a boss should spawn based on score."""
         if not self.ENABLE_BOSS or not self.game_active:
             return
         if not self.boss and self.score >= 10:
@@ -119,21 +114,20 @@ class Game(Widget):
             self.boss.velocity_x = -1
 
     def update(self, dt):
-        """Update game state each frame."""
         if not self.game_active:
             return
-
         self.score += dt
 
         if self.ENABLE_PLAYER and self.player:
             self.apply_gravity(self.player)
             self.player.move()
-            self.on_platform = self.handle_platform_collision(self.player)  # Update on_platform status
+            self.on_platform = self.handle_platform_collision(self.player)
             print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
         if self.boss:
+            self.apply_gravity(self.boss)
             self.boss.move()
             self.handle_platform_collision(self.boss)
             if self.boss.x < 0:
@@ -148,75 +142,66 @@ class Game(Widget):
         if self.ENABLE_ATTACKS:
             self.update_attacks()
 
-        if self.ENABLE_OBSTACLES:
-            self.check_obstacle_collisions()
+        if self.ENABLE_ENEMIES:
+            self.check_enemy_collisions()
 
         if self.health <= 0:
             self.game_active = False
             print("Game Over!")
 
     def update_hitbox_visibility(self):
-        """Update visibility of hitboxes for all entities."""
         if self.player:
             self.player.toggle_hitbox_debug(self.debug_hitbox)
         for platform in self.stage.platforms:
             platform.toggle_hitbox_debug(self.debug_hitbox)
         if self.boss:
             self.boss.toggle_hitbox_debug(self.debug_hitbox)
+        for enemy in self.stage.obstacles:
+            enemy.toggle_hitbox_debug(self.debug_hitbox)
 
     def apply_gravity(self, entity):
-        """Apply gravity to an entity."""
         entity.velocity_y -= 0.15
 
     def can_jump(self, entity):
-        """Check if an entity can jump."""
         on_ground = entity.y <= 0
         on_platform = self.is_on_platform(entity)
         return (on_ground or on_platform) and abs(entity.velocity_y) < 0.01
 
     def is_on_platform(self, entity):
-        """Check if an entity is standing on a platform (landed from above)."""
         entity_rect = entity.get_hitbox_rect()
         for platform in self.stage.platforms:
             plat_rect = platform.get_hitbox_rect()
             if Hitbox.collide(entity_rect, plat_rect) and entity.velocity_y <= 0:
-                # Check if the entity's feet are within a small range above the platform's top
                 distance = plat_rect['top'] - entity_rect['y']
-                if -5 <= distance <= 10:  # Allow a small margin for landing
+                if -5 <= distance <= 10:
                     return True
         return False
 
     def handle_platform_collision(self, entity):
-        """Handle collision between an entity and platforms."""
         entity_rect = entity.get_hitbox_rect()
         on_platform = False
-        entity_prev_y = entity.y + entity.velocity_y  # Approximate previous y position
+        entity_prev_y = entity.y + entity.velocity_y
 
         for platform in self.stage.platforms:
             plat_rect = platform.get_hitbox_rect()
             if Hitbox.collide(entity_rect, plat_rect):
-                # Case 1: Landing on top (descending)
                 if entity.velocity_y <= 0 and entity_prev_y + entity_rect['height'] > plat_rect['top']:
                     distance = plat_rect['top'] - entity_rect['y']
-                    if -5 <= distance <= 10:  # Player lands on top
+                    if -5 <= distance <= 10:
                         entity.y = plat_rect['top'] - entity.hitbox.offset_y
                         entity.velocity_y = 0
                         on_platform = True
                         continue
-                # Case 2: Side or bottom collision - allow passing through
-                # No adjustment to velocity or position; let the player pass through
                 continue
 
-        # Handle ground collision (y <= 0)
         if entity.y <= 0:
             entity.y = 0
             entity.velocity_y = 0
-            on_platform = True  # Treat ground as a platform for jumping purposes
+            on_platform = True
 
         return on_platform
 
     def update_attacks(self):
-        """Update player and enemy attacks."""
         for attack in self.player_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
@@ -241,16 +226,20 @@ class Game(Widget):
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
 
-    def check_obstacle_collisions(self):
-        """Check collisions between player and obstacles."""
-        for obstacle in self.stage.obstacles[:]:
-            if Hitbox.collide(self.player.get_hitbox_rect(), obstacle.get_hitbox_rect()):
+    def check_enemy_collisions(self):
+        for enemy in self.stage.obstacles[:]:
+            self.apply_gravity(enemy)
+            enemy.move()
+            self.handle_platform_collision(enemy)
+            if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.health -= 1
-                self.stage.remove_widget(obstacle)
-                self.stage.obstacles.remove(obstacle)
+                self.stage.remove_widget(enemy)
+                self.stage.obstacles.remove(enemy)
+            elif enemy.x < -enemy.width:
+                self.stage.remove_widget(enemy)
+                self.stage.obstacles.remove(enemy)
 
     def restart(self):
-        """Restart the game to initial state."""
         self.game_active = True
         self.score = 0
         self.stage_number = 1
@@ -261,9 +250,15 @@ class Game(Widget):
             self.remove_widget(self.boss)
             self.boss = None
         self.remove_widget(self.stage)
-        self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_OBSTACLES)
+        self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
+        if self.ENABLE_ENEMIES:
+            self.stage.spawn_obstacles()  # Spawn enemies immediately on restart
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0))
             self.add_widget(self.player)
+            # Reassign player as target for new enemies
+            for enemy in self.stage.obstacles:
+                enemy.target = self.player
+                print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")

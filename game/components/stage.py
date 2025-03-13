@@ -3,12 +3,14 @@ from kivy.properties import NumericProperty, ListProperty
 from kivy.clock import Clock
 import random
 from .platform import Platform
-from .obstacle import Obstacle
+from .enemy import Enemy
+from .hitbox import Hitbox
 from kivy.core.window import Window
+from kivy.vector import Vector
 
 class Stage(Widget):
     stage_number = NumericProperty(1)
-    obstacles = []
+    obstacles = ListProperty([])  # Holds Enemy instances
     platforms = ListProperty([])
 
     def __init__(self, stage_number=1, spawn_obstacles=False, **kwargs):
@@ -16,8 +18,6 @@ class Stage(Widget):
         self.stage_number = stage_number
         self.spawn_obstacles_enabled = spawn_obstacles
         self.spawn_platforms()
-        if self.spawn_obstacles_enabled:
-            Clock.schedule_once(self.spawn_obstacles, 0.1)
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
     def spawn_platforms(self):
@@ -37,34 +37,52 @@ class Stage(Widget):
             self.platforms.append(platform)
 
     def spawn_obstacles(self, dt=None):
+        """Spawn enemies with greater initial separation."""
         if not self.spawn_obstacles_enabled:
             return
-        for _ in range(5):
-            obstacle = Obstacle()
-            obstacle.x = Window.width + random.randint(0, 300)
-            obstacle.y = random.randint(50, max(50, Window.height - obstacle.height))
-            self.add_widget(obstacle)
-            self.obstacles.append(obstacle)
+        min_separation = 150  # Minimum distance between enemies
+        attempts = 0
+        max_attempts = 10  # Prevent infinite loop
+        for _ in range(5):  # Still spawn 5 enemies
+            while attempts < max_attempts:
+                x = random.uniform(0, Window.width - 50)
+                y = random.uniform(50, Window.height - 50)
+                too_close = False
+                for enemy in self.obstacles:
+                    dx = enemy.x - x
+                    dy = enemy.y - y
+                    if Vector(dx, dy).length() < min_separation:
+                        too_close = True
+                        break
+                if not too_close:
+                    enemy = Enemy()
+                    enemy.x = x
+                    enemy.y = y
+                    self.add_widget(enemy)
+                    self.obstacles.append(enemy)
+                    print(f"Spawned enemy at {enemy.pos}, parent: {enemy.parent}")
+                    break
+                attempts += 1
+            attempts = 0  # Reset for next enemy
 
     def update(self, dt):
         if not self.spawn_obstacles_enabled:
             return
-        for obstacle in self.obstacles[:]:
-            obstacle.move()
-            on_platform = self.check_platform_collision(obstacle)
-            if not on_platform and obstacle.y <= 0:
-                obstacle.y = 0
-                obstacle.velocity_y = 0
-            if obstacle.x < -obstacle.width:
-                self.remove_widget(obstacle)
-                self.obstacles.remove(obstacle)
+        for enemy in self.obstacles[:]:
+            if enemy.x < -enemy.width:
+                self.remove_widget(enemy)
+                self.obstacles.remove(enemy)
 
-    def check_platform_collision(self, obstacle):
+    def check_platform_collision(self, entity):
+        entity_rect = entity.get_hitbox_rect()
         for platform in self.platforms:
-            if (obstacle.collide_widget(platform) and 
-                obstacle.y > platform.y and 
-                obstacle.y <= platform.top + 5):
-                obstacle.y = platform.top
-                obstacle.velocity_y = 0
-                return True
+            plat_rect = platform.get_hitbox_rect()
+            if Hitbox.collide(entity_rect, plat_rect) and entity.velocity_y <= 0:
+                entity_prev_y = entity.y + entity.velocity_y
+                if entity_prev_y + entity_rect['height'] > plat_rect['top']:
+                    distance = plat_rect['top'] - entity_rect['y']
+                    if -5 <= distance <= 10:
+                        entity.y = plat_rect['top'] - entity.hitbox.offset_y
+                        entity.velocity_y = 0
+                        return True
         return False
