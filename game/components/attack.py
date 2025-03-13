@@ -32,9 +32,9 @@ class Attack(Widget):
 class ProjectileAttack(Attack):
     def __init__(self, start_pos: tuple, target_pos: tuple, speed: float = 10, **kwargs):
         super().__init__(**kwargs)
-        self.size = (10, 3)  # Small size for player attack
+        self.size = (10, 3)
         self.pos = start_pos
-        self.hitbox = Hitbox(offset_x=0, offset_y=0, width=10, height=3)
+        self.hitbox = Hitbox(offset_x=0, offset_y=0, width=20, height=20)  # เพิ่มขนาดชั่วคราว
         
         dx, dy = target_pos[0] - start_pos[0], target_pos[1] - start_pos[1]
         distance = max(math.sqrt(dx**2 + dy**2), 0.1)
@@ -45,9 +45,9 @@ class ProjectileAttack(Attack):
 class EnemyProjectile(Attack):
     def __init__(self, start_pos: tuple, target_pos: tuple, speed: float = 5, **kwargs):
         super().__init__(**kwargs)
-        self.size = (8, 8)  # Small size for enemy attack
+        self.size = (8, 8)
         self.pos = start_pos
-        self.hitbox = Hitbox(offset_x=0, offset_y=0, width=8, height=8)
+        self.hitbox = Hitbox(offset_x=0, offset_y=0, width=20, height=20)  # เพิ่มขนาดชั่วคราว
         
         dx, dy = target_pos[0] - start_pos[0], target_pos[1] - start_pos[1]
         distance = max(math.sqrt(dx**2 + dy**2), 0.1)
