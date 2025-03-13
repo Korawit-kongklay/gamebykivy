@@ -70,7 +70,7 @@ class PauseMenu(BoxLayout):
         music_slider = Slider(
             min=0,
             max=1,
-            value=self.game_instance.music_manager.current_music.volume if self.game_instance.music_manager.current_music else 1.0,
+            value=self.game_instance.music_manager.music_volume,
             step=0.1
         )
         music_slider.bind(value=self.on_music_volume_change)
@@ -107,8 +107,7 @@ class PauseMenu(BoxLayout):
 
     def on_music_volume_change(self, instance, value):
         """Adjust background music volume."""
-        if self.game_instance.music_manager.current_music:
-            self.game_instance.music_manager.current_music.volume = value
+        self.game_instance.music_manager.set_music_volume(value)
 
     def on_effects_volume_change(self, instance, value):
         """Adjust sound effects volume."""

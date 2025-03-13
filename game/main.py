@@ -1,4 +1,3 @@
-# main_menu.py
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
@@ -14,9 +13,9 @@ class MainMenu(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.spacing = 20
-        self.music_manager = MusicManager()
-        self.menu_music_volume = 1.0  # เก็บค่า volume สำหรับ background music
-        self.effects_volume = 1.0     # เก็บค่า volume สำหรับ sound effects
+        self.music_manager = MusicManager()  # Singleton instance
+        self.menu_music_volume = 1.0
+        self.effects_volume = 1.0
         
         # เริ่มเล่นเพลงเมนู
         self.music_manager.play_menu_music()
@@ -59,14 +58,11 @@ class MainMenu(BoxLayout):
         self.add_widget(self.exit_button)
 
     def start_game(self, instance):
-        """Switch to the game screen and pass music and effects volumes."""
-        self.music_manager.stop_music()  # หยุดเพลงเมนู
+        """Switch to the game screen and pass music manager."""
+        self.music_manager.stop_music()
         app = App.get_running_app()
         app.root.clear_widgets()
-        game = Game()
-        # ส่งต่อค่า volume ทั้ง background และ effects
-        game.music_manager.current_music.volume = self.menu_music_volume
-        game.music_manager.set_effects_volume(self.effects_volume)
+        game = Game(music_manager=self.music_manager)  # ส่ง MusicManager instance
         app.root.add_widget(game)
 
     def show_settings(self, instance):
@@ -80,7 +76,7 @@ class MainMenu(BoxLayout):
         music_slider = Slider(
             min=0,
             max=1,
-            value=self.music_manager.current_music.volume if self.music_manager.current_music else 1.0,
+            value=self.music_manager.music_volume,
             step=0.1
         )
         music_slider.bind(value=self.on_music_volume_change)
@@ -93,7 +89,7 @@ class MainMenu(BoxLayout):
         effects_slider = Slider(
             min=0,
             max=1,
-            value=self.effects_volume,
+            value=self.music_manager.effects_volume,
             step=0.1
         )
         effects_slider.bind(value=self.on_effects_volume_change)
@@ -117,13 +113,10 @@ class MainMenu(BoxLayout):
 
     def on_music_volume_change(self, instance, value):
         """Adjust background music volume and store it."""
-        if self.music_manager.current_music:
-            self.music_manager.current_music.volume = value
-        self.menu_music_volume = value
+        self.music_manager.set_music_volume(value)
 
     def on_effects_volume_change(self, instance, value):
         """Adjust sound effects volume and store it."""
-        self.effects_volume = value
         self.music_manager.set_effects_volume(value)
 
     def exit_game(self, instance):

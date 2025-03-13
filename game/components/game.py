@@ -40,14 +40,14 @@ class Game(Widget):
     ENABLE_BOSS = False
     MAX_STAGES = 5  # Maximum number of stages
 
-    def __init__(self, initial_player_hp=20, **kwargs):
+    def __init__(self, music_manager=None, initial_player_hp=20, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
-        self.hp_layout = None  # Will hold the BoxLayout for hearts
-        self.music_manager = MusicManager()
-        self.walk_sound_playing = False  # To control walk sound looping
-        self.restart_button = None  # ตัวแปรสำหรับปุ่ม restart
-        self.end_game_label = None  # ตัวแปรสำหรับข้อความ Victory/Game Over
+        self.hp_layout = None
+        self.music_manager = music_manager if music_manager else MusicManager()  # รับ MusicManager หรือสร้างใหม่ถ้าไม่มี
+        self.walk_sound_playing = False
+        self.restart_button = None
+        self.end_game_label = None
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
