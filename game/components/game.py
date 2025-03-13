@@ -20,12 +20,13 @@ class Game(Widget):
     game_active = BooleanProperty(True)
     player_attacks = ListProperty([])  # Player-initiated attacks
     enemy_attacks = ListProperty([])  # Enemy-initiated attacks
+    debug_hitbox = BooleanProperty(False)  # Toggle for hitbox debugging
 
     # Game feature toggles
     ENABLE_PLAYER = True
     ENABLE_OBSTACLES = False
     ENABLE_ATTACKS = True
-    ENABLE_BOSS = False  # New toggle for boss spawning
+    ENABLE_BOSS = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -33,7 +34,6 @@ class Game(Widget):
         self.bind_inputs()
         # Schedule updates
         Clock.schedule_interval(self.update, 1.0 / 60.0)
-        # Only schedule boss spawning if enabled
         if self.ENABLE_BOSS:
             Clock.schedule_interval(self.spawn_boss_check, 5.0)
 
@@ -67,7 +67,16 @@ class Game(Widget):
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         """Handle key press events."""
-        if not self.game_active or not self.ENABLE_PLAYER or not self.player:
+        if not self.game_active:
+            return False
+
+        # Toggle hitbox debugging with 'H' key
+        if keycode[1] == 'h':
+            self.debug_hitbox = not self.debug_hitbox
+            self.update_hitbox_visibility()
+            return True
+
+        if not self.ENABLE_PLAYER or not self.player:
             return False
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
@@ -119,6 +128,8 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.handle_platform_collision(self.player)
+            if self.debug_hitbox:
+                self.player.update_hitbox_debug()
 
         if self.boss:
             self.boss.move()
@@ -129,6 +140,8 @@ class Game(Widget):
             if current_time - self.last_boss_attack >= self.boss_attack_cooldown:
                 self.boss.shoot(self)
                 self.last_boss_attack = current_time
+            if self.debug_hitbox:
+                self.boss.update_hitbox_debug()
 
         if self.ENABLE_ATTACKS:
             self.update_attacks()
@@ -139,6 +152,15 @@ class Game(Widget):
         if self.health <= 0:
             self.game_active = False
             print("Game Over!")
+
+    def update_hitbox_visibility(self):
+        """Update visibility of hitboxes for all entities."""
+        if self.player:
+            self.player.toggle_hitbox_debug(self.debug_hitbox)
+        for platform in self.stage.platforms:
+            platform.toggle_hitbox_debug(self.debug_hitbox)
+        if self.boss:
+            self.boss.toggle_hitbox_debug(self.debug_hitbox)
 
     def apply_gravity(self, entity):
         """Apply gravity to an entity."""
