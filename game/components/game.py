@@ -1,14 +1,18 @@
 from kivy.uix.widget import Widget
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.image import Image
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
 from .player import Player
 from .stage import Stage
 from .hitbox import Hitbox
 from .boss import Boss
 from .enemy import Enemy
 from .attack import ProjectileAttack
-from .portal import Portal  # ต้องมีไฟล์ portal.py หรือเพิ่มคลาส Portal ในโค้ดนี้
+from .portal import Portal
+import random  # For random positioning
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -18,7 +22,8 @@ class Game(Widget):
     boss = ObjectProperty(None)
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
-    health = NumericProperty(3)  # Synced with player.health
+    player_health = NumericProperty(20)  # Player starts with 20 HP (10 hearts)
+    player_max_health = NumericProperty(20)  # Max health is 20
     game_active = BooleanProperty(True)
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
@@ -28,26 +33,36 @@ class Game(Widget):
     ENABLE_ENEMIES = True
     ENABLE_ATTACKS = True
     ENABLE_BOSS = False
-    MAX_STAGES = 5  # จำนวน stage สูงสุด
+    MAX_STAGES = 5  # Maximum number of stages
 
-    def __init__(self, initial_player_hp=100, **kwargs):
+    def __init__(self, initial_player_hp=20, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
+        self.hp_layout = None  # Will hold the BoxLayout for hearts
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
-            Clock.schedule_interval(self.spawn_boss_check, 5.0)
+            Clock.schedule_interval(self.spawn_boss_check, 5)
+        # Schedule an initial update after the widget is added to the window
+        Clock.schedule_once(self._initial_update, 0)
+
+    def _initial_update(self, dt):
+        """Ensure hearts are drawn at the correct position after initialization."""
+        self.update_hp_hearts()
 
     def initialize_game(self):
+        """Initialize the game state and entities."""
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
         if self.ENABLE_PLAYER:
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
-            self.health = self.player.health
+            self.player_health = self.player.health
+            self.player_max_health = self.player.max_health
             self.add_widget(self.player)
+            self.player.bind(health=self.on_player_health_changed)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 # print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
@@ -59,15 +74,26 @@ class Game(Widget):
         self.score = 0
         self.on_platform = False
         # ไม่เรียก self.spawn_portal() ที่นี่
+        # Initialize hp_layout
+        self.hp_layout = self.ids.hp_layout  # Access BoxLayout via id
+        self.hp_layout.bind(pos=self._update_hp_position)  # Bind pos to update hearts
+        self.update_hp_hearts()  # Set up initial heart display
 
     def spawn_initial_enemies(self):
-        """Spawn initial enemies based on stage number."""
+        """Spawn initial enemies at random positions based on stage number."""
         enemy_count = 5 + (self.stage_number - 1)  # Stage 1: 5, Stage 2: 6, etc.
-        self.stage.obstacles.clear()
+        self.stage.obstacles.clear()  # Clear existing obstacles
+        enemy_size = (80, 80)  # Assuming Enemy size from your previous code; adjust if different
         for _ in range(enemy_count):
-            self.stage.spawn_obstacles()  # สร้างศัตรูทีละตัว
+            # Random x and y within window bounds, accounting for enemy size
+            spawn_x = random.uniform(0, Window.width - enemy_size[0])
+            spawn_y = random.uniform(0, Window.height - enemy_size[1])
+            enemy = Enemy(pos=(spawn_x, spawn_y))
+            self.stage.add_widget(enemy)
+            self.stage.obstacles.append(enemy)
 
     def spawn_portal(self):
+        """Spawn or reposition the portal."""
         if self.portal:
             self.remove_widget(self.portal)
         portal_x = Window.width - 60
@@ -75,6 +101,10 @@ class Game(Widget):
         self.portal = Portal(pos=(portal_x, portal_y))
         self.add_widget(self.portal)
         print(f"Portal spawned at {self.portal.pos}")
+
+    def _update_hp_position(self, instance, value):
+        """Update heart positions when hp_layout moves."""
+        self.update_hp_hearts()
 
     def bind_inputs(self):
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -130,6 +160,54 @@ class Game(Widget):
             self.add_widget(self.boss)
             self.boss.velocity_x = -1
 
+    def on_player_health_changed(self, instance, value):
+        """Callback to update UI when player health changes."""
+        self.player_health = value
+        self.update_hp_hearts()  # Update heart display
+
+    def update_hp_hearts(self):
+        """Update the heart display using Image widgets in the hp_layout."""
+        if not self.hp_layout:
+            return
+
+        # Clear previous heart widgets
+        self.hp_layout.clear_widgets()
+
+        max_hearts = int(self.player_max_health / 2)  # Total heart slots (10 for 20 HP)
+        full_hearts = int(self.player_health / 2)  # Number of full hearts (2 HP each)
+        half_heart = self.player_health % 2 == 1  # True if there’s 1 HP left
+
+        # Add full hearts
+        for _ in range(full_hearts):
+            heart = Image(
+                source='assets/images/full_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(heart)
+
+        # Add half heart if applicable
+        if half_heart:
+            half = Image(
+                source='assets/images/half_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(half)
+
+        # Add blank hearts for remaining slots up to max_hearts
+        remaining_hearts = max_hearts - full_hearts - (1 if half_heart else 0)
+        for _ in range(remaining_hearts):
+            blank = Image(
+                source='assets/images/blank_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(blank)
+
     def update(self, dt):
         if not self.game_active:
             return
@@ -138,7 +216,7 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
-            self.health = self.player.health  # Sync with Player's health
+            self.player_health = self.player.health  # Sync with Player's health
             # print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
@@ -166,7 +244,7 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.update_enemies()
 
-        # ตรวจสอบการชนกับ portal และไป stage ถัดไป
+        # Check collision with portal and advance to next stage
         if self.portal and self.player and Hitbox.collide(self.player.get_hitbox_rect(), self.portal.get_hitbox_rect()):
             self.next_stage()
 
@@ -175,19 +253,19 @@ class Game(Widget):
             self.spawn_portal()
             print("Portal spawned after clearing Stage 1")
 
-        # ถ้าถึง stage สุดท้ายและกำจัดศัตรูหมด
+        # Check for game completion (last stage, no enemies or boss)
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
             print("Game Completed! All stages cleared!")
 
-        if self.health <= 0:
+        if self.player_health <= 0:
             self.game_active = False
             print("Game Over!")
 
     def next_stage(self):
         """Advance to the next stage."""
         if self.stage_number >= self.MAX_STAGES:
-            return  # ไม่ไปต่อถ้าถึง stage สุดท้ายแล้ว
+            return  # Stop if at max stage
         self.stage_number += 1
         print(f"Moving to Stage {self.stage_number}")
         for attack in self.player_attacks + self.enemy_attacks:
@@ -213,7 +291,8 @@ class Game(Widget):
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
             self.player.velocity_y = 0
-        # ไม่เรียก self.spawn_portal() ที่นี่ แต่ให้จัดการใน update สำหรับ Stage 2+
+        # ไม่เรียก self.spawn_portal() ที่นี่ แต่ให้จัดการใน update
+        self.update_hp_hearts()  # Reset hearts on stage change
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -261,7 +340,6 @@ class Game(Widget):
                 continue
 
         if entity.y <= 0:
-            self.health = self.player.health
             entity.y = 0
             entity.velocity_y = 0
             on_platform = True
@@ -325,7 +403,8 @@ class Game(Widget):
         self.game_active = True
         self.score = 0
         self.stage_number = 1
-        self.health = self.initial_player_hp
+        self.player_health = self.initial_player_hp
+        self.player_max_health = self.initial_player_hp
         self.player_attacks.clear()
         self.enemy_attacks.clear()
         if self.boss:
@@ -333,6 +412,7 @@ class Game(Widget):
             self.boss = None
         if self.portal:
             self.remove_widget(self.portal)
+            self.portal = None
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
@@ -341,9 +421,12 @@ class Game(Widget):
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
-            self.health = self.player.health
+            self.player_health = self.player.health
+            self.player_max_health = self.player.max_health
+            self.player.bind(health=self.on_player_health_changed)
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         # ไม่เรียก self.spawn_portal() ที่นี่
+        self.update_hp_hearts()  # Reset hearts
