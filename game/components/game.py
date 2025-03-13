@@ -12,11 +12,10 @@ from .portal import Portal  # ต้องมีไฟล์ portal.py หรื
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
-    portal = ObjectProperty(None, allownone=True)
+    portal = ObjectProperty(None, allownone=True)  # ประกาศครั้งเดียว
     player = ObjectProperty(None)
     stage = ObjectProperty(None)
     boss = ObjectProperty(None)
-    portal = ObjectProperty(None)  # ตัวแปรสำหรับ portal
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
     health = NumericProperty(3)  # Synced with player.health
@@ -51,7 +50,7 @@ class Game(Widget):
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-#                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                # print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
@@ -59,7 +58,7 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
-        self.spawn_portal()  # สร้าง portal ตั้งแต่เริ่มเกม
+        # ไม่เรียก self.spawn_portal() ที่นี่
 
     def spawn_initial_enemies(self):
         """Spawn initial enemies based on stage number."""
@@ -69,13 +68,13 @@ class Game(Widget):
             self.stage.spawn_obstacles()  # สร้างศัตรูทีละตัว
 
     def spawn_portal(self):
-        # สร้าง portal ในทุก stage
         if self.portal:
             self.remove_widget(self.portal)
         portal_x = Window.width - 60
         portal_y = 10
         self.portal = Portal(pos=(portal_x, portal_y))
         self.add_widget(self.portal)
+        print(f"Portal spawned at {self.portal.pos}")
 
     def bind_inputs(self):
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -140,9 +139,13 @@ class Game(Widget):
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
             self.health = self.player.health  # Sync with Player's health
-#            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
+            # print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
+        
+        if self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
+            self.spawn_portal()
+            print(f"Portal spawned after clearing Stage {self.stage_number}")
 
         if self.boss:
             self.apply_gravity(self.boss)
@@ -167,6 +170,11 @@ class Game(Widget):
         if self.portal and self.player and Hitbox.collide(self.player.get_hitbox_rect(), self.portal.get_hitbox_rect()):
             self.next_stage()
 
+        # เรียก spawn_portal เมื่อเคลียร์ด่าน (Stage 1: ศัตรูหมด)
+        if self.stage_number == 1 and self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
+            self.spawn_portal()
+            print("Portal spawned after clearing Stage 1")
+
         # ถ้าถึง stage สุดท้ายและกำจัดศัตรูหมด
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
@@ -186,6 +194,9 @@ class Game(Widget):
             self.remove_widget(attack)
         self.player_attacks.clear()
         self.enemy_attacks.clear()
+        if self.portal:
+            self.remove_widget(self.portal)
+            self.portal = None
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
@@ -193,16 +204,16 @@ class Game(Widget):
             self.spawn_initial_enemies()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                # print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
             self.stage.spawn_obstacles()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-#                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                # print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
             self.player.velocity_y = 0
-        self.spawn_portal()
+        # ไม่เรียก self.spawn_portal() ที่นี่ แต่ให้จัดการใน update สำหรับ Stage 2+
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -308,7 +319,7 @@ class Game(Widget):
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             if self.debug_hitbox:
-                self.enemy.update_hitbox_debug()
+                enemy.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
@@ -335,4 +346,4 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        self.spawn_portal()  # สร้าง portal ใหม่
+        # ไม่เรียก self.spawn_portal() ที่นี่
