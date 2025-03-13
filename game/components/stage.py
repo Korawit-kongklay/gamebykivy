@@ -1,5 +1,5 @@
 from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty
+from kivy.properties import NumericProperty, ListProperty  # Add ListProperty
 from kivy.clock import Clock
 import random
 from .platform import Platform
@@ -9,7 +9,7 @@ from kivy.core.window import Window
 class Stage(Widget):
     stage_number = NumericProperty(1)
     obstacles = []
-    platforms = []
+    platforms = ListProperty([])  # Changed to ListProperty for binding
 
     def __init__(self, stage_number=1, spawn_obstacles=False, **kwargs):
         super().__init__(**kwargs)
@@ -21,27 +21,18 @@ class Stage(Widget):
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
     def spawn_platforms(self):
-        # Scale factors from original 800x600 to 1920x1080
-        base_width, base_height = 800, 600
-        width_scale = Window.width / base_width  # 1920 / 800 = 2.4
-        height_scale = Window.height / base_height  # 1080 / 600 = 1.8
-
         platform_configs = {
-            1: [(200, 150), (293, 150), (386, 150),(450, 250), (543, 250),(100, 350), (193, 350), (286, 350)],
+            1: [(200, 150), (293, 150), (386, 150), (450, 250), (543, 250), (100, 350), (193, 350), (286, 350)],
             2: [(150, 100), (400, 200), (300, 350), (600, 300)]
         }.get(self.stage_number, [
-            (random.randint(0, Window.width - 15), random.randint(0, Window.height - 8)),
-            (random.randint(0, Window.width - 15), random.randint(0, Window.height - 8)),
-            (random.randint(0, Window.width - 15), random.randint(0, Window.height - 8))  # Added one more for larger screen
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24))
         ])
 
         self.platforms.clear()
         for x, y in platform_configs:
-            # Scale fixed positions for Stages 1 and 2
-            if (x, y) in [(200, 150), (450, 250), (100, 350), (150, 100), (400, 200), (300, 350), (600, 300)]:
-                x = int(x * width_scale)  # e.g., 200 * 2.4 = 480
-                y = int(y * height_scale)  # e.g., 150 * 1.8 = 270
-            platform = Platform(pos=(x, y), size=(93, 24))  # Keeping size (15, 8) for now
+            platform = Platform(pos=(x, y), size=(93, 24))
             self.add_widget(platform)
             self.platforms.append(platform)
 
@@ -50,8 +41,8 @@ class Stage(Widget):
             return
         for _ in range(5):
             obstacle = Obstacle()
-            obstacle.x = Window.width + random.randint(0, 300)  # Starts off-screen at 1920+
-            obstacle.y = random.randint(50, max(50, Window.height - obstacle.height))  # Up to 1080
+            obstacle.x = Window.width + random.randint(0, 300)
+            obstacle.y = random.randint(50, max(50, Window.height - obstacle.height))
             self.add_widget(obstacle)
             self.obstacles.append(obstacle)
 

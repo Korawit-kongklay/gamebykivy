@@ -39,9 +39,10 @@ class Character(Widget):
     def move(self):
         self.pos = Vector(*self.velocity) + self.pos
         self.x = max(0, min(self.x, Window.width - self.width))
-        self.y = max(0, self.y)
-        if self.y == 0:
-            self.velocity_y = 0
 
     def on_velocity_x(self, instance, value: float):
         self.facing_right = value >= 0
+
+class Dino(Character):
+    def __init__(self, **kwargs):
+        super().__init__(gif_path='assets/gifs/ufopug.gif', **kwargs)

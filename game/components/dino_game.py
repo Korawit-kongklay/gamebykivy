@@ -28,7 +28,7 @@ class DinoGame(Widget):
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_OBSTACLES)
         self.add_widget(self.stage)
         if self.ENABLE_PLAYER:
-            self.dino = Dino(pos=(100, 0))  # Adjusted from (50, 0) for larger screen
+            self.dino = Dino(pos=(100, 0))
             self.add_widget(self.dino)
         self.shoot_cooldown = 0.5
         self.last_shot_time = 0
@@ -48,12 +48,12 @@ class DinoGame(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active or not self.ENABLE_PLAYER or not self.dino:
             return False
-        if keycode[1] == 'spacebar' and self.dino.y == 0:
-            self.dino.velocity_y = 7  # Increased from 5 for taller screen
+        if keycode[1] == 'spacebar' and (self.dino.y == 0 or self.check_platform_collision(self.dino)):
+            self.dino.velocity_y = 7
         elif keycode[1] in ('left', 'a'):
-            self.dino.velocity_x = -5  # Increased from -3 for wider screen
+            self.dino.velocity_x = -5
         elif keycode[1] in ('right', 'd'):
-            self.dino.velocity_x = 5  # Increased from 3 for wider screen
+            self.dino.velocity_x = 5
         return True
 
     def _on_keyboard_up(self, keyboard, keycode):
@@ -69,7 +69,7 @@ class DinoGame(Widget):
         if button != 'left' or not self.game_active or (Clock.get_time() - self.last_shot_time < self.shoot_cooldown):
             return
         start_pos = (self.dino.x + self.dino.width, self.dino.y + self.dino.height / 2)
-        bullet = PlayerBullet(start_pos=start_pos, target_pos=self.mouse_pos, speed=15)  # Increased speed
+        bullet = PlayerBullet(start_pos=start_pos, target_pos=self.mouse_pos, speed=15)
         self.add_widget(bullet)
         self.bullets.append(bullet)
         self.last_shot_time = Clock.get_time()
@@ -78,14 +78,30 @@ class DinoGame(Widget):
         if not self.game_active:
             return
         if self.ENABLE_PLAYER and self.dino:
-            self.dino.velocity_y -= 0.15  # Slightly stronger gravity for taller screen
+            self.dino.velocity_y -= 0.15  # Gravity
             self.dino.move()
+            self.check_platform_collision(self.dino)  # Check after moving
         if self.ENABLE_BULLETS:
             for bullet in self.bullets[:]:
                 bullet.move()
                 if not (0 <= bullet.x <= Window.width and 0 <= bullet.y <= Window.height):
                     self.remove_widget(bullet)
                     self.bullets.remove(bullet)
+
+    def check_platform_collision(self, character):
+        for platform in self.stage.platforms:
+            if (character.collide_widget(platform) and 
+                character.velocity_y <= 0 and  # Falling or stationary
+                character.y + character.height > platform.y and  # Character top above platform bottom
+                character.y <= platform.y + platform.height + 5):  # Character bottom near platform top
+                character.y = platform.y + platform.height  # Land on platform
+                character.velocity_y = 0
+                return True
+        if character.y <= 0:  # Ground check
+            character.y = 0
+            character.velocity_y = 0
+            return True
+        return False
 
     def restart(self):
         self.game_active = True
