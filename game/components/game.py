@@ -17,7 +17,7 @@ class Game(Widget):
     boss = ObjectProperty(None)
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
-    health = NumericProperty(3)
+    health = NumericProperty(3)  # Synced with player.health
     game_active = BooleanProperty(True)
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
@@ -28,8 +28,9 @@ class Game(Widget):
     ENABLE_ATTACKS = True
     ENABLE_BOSS = False
 
-    def __init__(self, **kwargs):
+    def __init__(self, initial_player_hp=100, **kwargs):
         super().__init__(**kwargs)
+        self.initial_player_hp = initial_player_hp
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
@@ -41,25 +42,23 @@ class Game(Widget):
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn enemies immediately
+            self.stage.spawn_obstacles()
         if self.ENABLE_PLAYER:
-            self.player = Player(pos=(100, 0))
+            self.player = Player(pos=(100, 0), health=self.initial_player_hp)
+            self.health = self.player.health
             self.add_widget(self.player)
-            # Set player as target for all enemies
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+#                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
         self.last_boss_attack = 0
         self.mouse_pos = (0, 0)
         self.score = 0
-        self.health = 3
         self.on_platform = False
 
     def bind_inputs(self):
-        """Bind keyboard and mouse inputs for player control."""
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self.keyboard.bind(on_key_down=self._on_keyboard_down, on_key_up=self._on_keyboard_up)
         Window.bind(mouse_pos=self._on_mouse_pos)
@@ -121,7 +120,8 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
-            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
+            self.health = self.player.health  # Sync with Player's health
+#            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -144,7 +144,6 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.update_enemies()
 
-        # Check if all enemies are cleared and move to next stage
         if self.ENABLE_ENEMIES and not self.stage.obstacles and not self.boss:
             self.next_stage()
 
@@ -153,25 +152,20 @@ class Game(Widget):
             print("Game Over!")
 
     def next_stage(self):
-        """Advance to the next stage when all enemies are cleared."""
         self.stage_number += 1
         print(f"Moving to Stage {self.stage_number}")
-        # Clear existing attacks
         for attack in self.player_attacks + self.enemy_attacks:
             self.remove_widget(attack)
         self.player_attacks.clear()
         self.enemy_attacks.clear()
-        # Remove and replace the current stage
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn new enemies
-            # Reassign player as target for new enemies
+            self.stage.spawn_obstacles()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        # Reset player position
+#                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
@@ -223,6 +217,7 @@ class Game(Widget):
                 continue
 
         if entity.y <= 0:
+            self.health = self.player.health
             entity.y = 0
             entity.velocity_y = 0
             on_platform = True
@@ -230,7 +225,6 @@ class Game(Widget):
         return on_platform
 
     def update_attacks(self):
-        # Update player attacks
         for attack in self.player_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
@@ -238,7 +232,6 @@ class Game(Widget):
                 self.player_attacks.remove(attack)
             else:
                 attack_rect = attack.get_hitbox_rect()
-                # Check collision with boss
                 if self.boss and Hitbox.collide(attack_rect, self.boss.get_hitbox_rect()):
                     self.boss.health -= 1
                     self.remove_widget(attack)
@@ -247,53 +240,48 @@ class Game(Widget):
                         self.remove_widget(self.boss)
                         self.boss = None
                         self.score += 50
-                # Check collision with enemies
                 elif self.ENABLE_ENEMIES:
                     for enemy in self.stage.obstacles[:]:
                         enemy_rect = enemy.get_hitbox_rect()
                         if Hitbox.collide(attack_rect, enemy_rect):
-                            enemy.take_damage(100)  # Apply damage to enemy
+                            enemy.take_damage(100)
                             self.remove_widget(attack)
                             self.player_attacks.remove(attack)
                             if enemy.health <= 0:
-                                self.score += 100  # Increase score when enemy dies
+                                self.score += 100
                                 print(f"Enemy killed! Score increased to {self.score}")
                             break
 
-        # Update enemy attacks
         for attack in self.enemy_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
             elif Hitbox.collide(attack.get_hitbox_rect(), self.player.get_hitbox_rect()):
-                self.health -= 1
+                self.player.take_damage(1)
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
 
     def update_enemies(self):
-        """Update all enemies and handle collisions."""
         for enemy in self.stage.obstacles[:]:
             self.apply_gravity(enemy)
             enemy.move()
             self.handle_platform_collision(enemy)
-            # Collision with player
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
-                self.health -= 1
+                self.player.take_damage(1)
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
-            # Remove enemies that go off-screen
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             if self.debug_hitbox:
-                enemy.update_hitbox_debug()
+                self.enemy.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
         self.score = 0
         self.stage_number = 1
-        self.health = 3
+        self.health = self.initial_player_hp
         self.player_attacks.clear()
         self.enemy_attacks.clear()
         if self.boss:
@@ -303,12 +291,12 @@ class Game(Widget):
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn enemies immediately on restart
+            self.stage.spawn_obstacles()
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
-            self.player = Player(pos=(100, 0))
+            self.player = Player(pos=(100, 0), health=self.initial_player_hp)
+            self.health = self.player.health
             self.add_widget(self.player)
-            # Reassign player as target for new enemies
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
