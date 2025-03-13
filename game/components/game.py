@@ -11,14 +11,15 @@ from .hitbox import Hitbox
 from .boss import Boss
 from .enemy import Enemy
 from .attack import ProjectileAttack
-from .portal import Portal  # Ensure this exists or needs implementation
+from .portal import Portal
+import random  # Add this for random positioning
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
     player = ObjectProperty(None)
     stage = ObjectProperty(None)
     boss = ObjectProperty(None)
-    portal = ObjectProperty(None, allownone=True)  # Portal property (fixed duplicate declaration)
+    portal = ObjectProperty(None, allownone=True)
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
     player_health = NumericProperty(20)  # Player starts with 20 HP (10 hearts)
@@ -42,7 +43,7 @@ class Game(Widget):
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
-            Clock.schedule_interval(self.spawn_boss_check, 5.0)
+            Clock.schedule_interval(self.spawn_boss_check, 5)
         # Schedule an initial update after the widget is added to the window
         Clock.schedule_once(self._initial_update, 0)
 
@@ -78,11 +79,15 @@ class Game(Widget):
         self.spawn_portal()  # Spawn portal at game start
 
     def spawn_initial_enemies(self):
-        """Spawn initial enemies based on stage number."""
+        """Spawn initial enemies at random positions based on stage number."""
         enemy_count = 5 + (self.stage_number - 1)  # Stage 1: 5, Stage 2: 6, etc.
         self.stage.obstacles.clear()  # Clear existing obstacles
+        enemy_size = (80, 80)  # Assuming Enemy size from your previous code; adjust if different
         for _ in range(enemy_count):
-            enemy = Enemy(pos=(Window.width - 100, 0))  # Assuming Enemy has a default pos
+            # Random x and y within window bounds, accounting for enemy size
+            spawn_x = random.uniform(0, Window.width - enemy_size[0])
+            spawn_y = random.uniform(0, Window.height - enemy_size[1])
+            enemy = Enemy(pos=(spawn_x, spawn_y))
             self.stage.add_widget(enemy)
             self.stage.obstacles.append(enemy)
 
@@ -276,7 +281,7 @@ class Game(Widget):
         if self.boss:
             self.boss.toggle_hitbox_debug(self.debug_hitbox)
         for enemy in self.stage.obstacles:
-            enemy.toggle_hitbox_debug(self.debug_hitbox)  # Fixed method name
+            enemy.toggle_hitbox_debug(self.debug_hitbox)
 
     def apply_gravity(self, entity):
         entity.velocity_y -= 0.15
@@ -371,7 +376,7 @@ class Game(Widget):
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             if self.debug_hitbox:
-                enemy.update_hitbox_debug()  # Fixed method name
+                enemy.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
