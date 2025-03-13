@@ -1,4 +1,5 @@
 from kivy.uix.widget import Widget
+from kivy.app import App
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -79,6 +80,10 @@ class Game(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active:
             return False
+        if keycode[1] == 'escape':  # เพิ่มการจัดการ ESC
+            self.game_active = False
+            self.show_pause_menu()
+            return True
         if keycode[1] == 'h':
             self.debug_hitbox = not self.debug_hitbox
             self.update_hitbox_visibility()
@@ -324,3 +329,11 @@ class Game(Widget):
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.music_manager.play_music(self.stage_number)
+
+    def show_pause_menu(self):
+        """Show the pause menu."""
+        from .pause_menu import PauseMenu
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
+        app.root.add_widget(pause_menu)   
