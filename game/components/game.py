@@ -1,7 +1,10 @@
 from kivy.uix.widget import Widget
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.image import Image
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
 from .player import Player
 from .stage import Stage
 from .hitbox import Hitbox
@@ -17,7 +20,8 @@ class Game(Widget):
     boss = ObjectProperty(None)
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
-    health = NumericProperty(3)  # Synced with player.health
+    player_health = NumericProperty(20)  # Player starts with 20 HP (10 hearts)
+    player_max_health = NumericProperty(20)  # Max health is 20
     game_active = BooleanProperty(True)
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
@@ -28,14 +32,21 @@ class Game(Widget):
     ENABLE_ATTACKS = True
     ENABLE_BOSS = False
 
-    def __init__(self, initial_player_hp=100, **kwargs):
+    def __init__(self, initial_player_hp=20, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
+        self.hp_layout = None  # Will hold the BoxLayout for hearts
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
             Clock.schedule_interval(self.spawn_boss_check, 5.0)
+        # Schedule an initial update after the widget is added to the window
+        Clock.schedule_once(self._initial_update, 0)
+
+    def _initial_update(self, dt):
+        """Ensure hearts are drawn at the correct position after initialization."""
+        self.update_hp_hearts()
 
     def initialize_game(self):
         """Initialize the game state and entities."""
@@ -45,11 +56,12 @@ class Game(Widget):
             self.stage.spawn_obstacles()
         if self.ENABLE_PLAYER:
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
-            self.health = self.player.health
+            self.player_health = self.player.health
+            self.player_max_health = self.player.max_health
             self.add_widget(self.player)
+            self.player.bind(health=self.on_player_health_changed)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-#                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
@@ -57,6 +69,15 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
+        # Initialize hp_layout
+        self.hp_layout = self.ids.hp_layout  # Access BoxLayout via id
+        # Bind pos to ensure hearts follow layout position
+        self.hp_layout.bind(pos=self._update_hp_position)
+        self.update_hp_hearts()
+
+    def _update_hp_position(self, instance, value):
+        """Update heart positions when hp_layout moves."""
+        self.update_hp_hearts()
 
     def bind_inputs(self):
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -112,6 +133,54 @@ class Game(Widget):
             self.add_widget(self.boss)
             self.boss.velocity_x = -1
 
+    def on_player_health_changed(self, instance, value):
+        """Callback to update UI when player health changes."""
+        self.player_health = value
+        self.update_hp_hearts()  # Update heart display
+
+    def update_hp_hearts(self):
+        """Update the heart display using Image widgets in the hp_layout."""
+        if not self.hp_layout:
+            return
+
+        # Clear previous heart widgets
+        self.hp_layout.clear_widgets()
+
+        max_hearts = int(self.player_max_health / 2)  # Total heart slots (10 for 20 HP)
+        full_hearts = int(self.player_health / 2)  # Number of full hearts (2 HP each)
+        half_heart = self.player_health % 2 == 1  # True if there’s 1 HP left
+
+        # Add full hearts
+        for _ in range(full_hearts):
+            heart = Image(
+                source='assets/images/full_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(heart)
+
+        # Add half heart if applicable
+        if half_heart:
+            half = Image(
+                source='assets/images/half_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(half)
+
+        # Add blank hearts for remaining slots up to max_hearts
+        remaining_hearts = max_hearts - full_hearts - (1 if half_heart else 0)
+        for _ in range(remaining_hearts):
+            blank = Image(
+                source='assets/images/blank_heart.png',
+                size=(50, 50),
+                allow_stretch=True,
+                keep_ratio=False
+            )
+            self.hp_layout.add_widget(blank)
+
     def update(self, dt):
         if not self.game_active:
             return
@@ -120,8 +189,6 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
-            self.health = self.player.health  # Sync with Player's health
-#            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -147,7 +214,7 @@ class Game(Widget):
         if self.ENABLE_ENEMIES and not self.stage.obstacles and not self.boss:
             self.next_stage()
 
-        if self.health <= 0:
+        if self.player_health <= 0:
             self.game_active = False
             print("Game Over!")
 
@@ -165,7 +232,6 @@ class Game(Widget):
             self.stage.spawn_obstacles()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-#                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
@@ -179,7 +245,7 @@ class Game(Widget):
         if self.boss:
             self.boss.toggle_hitbox_debug(self.debug_hitbox)
         for enemy in self.stage.obstacles:
-            enemy.toggle_hitbox_debug(self.debug_hitbox)
+            self.update_hitbox_debug()
 
     def apply_gravity(self, entity):
         entity.velocity_y -= 0.15
@@ -217,7 +283,6 @@ class Game(Widget):
                 continue
 
         if entity.y <= 0:
-            self.health = self.player.health
             entity.y = 0
             entity.velocity_y = 0
             on_platform = True
@@ -275,13 +340,14 @@ class Game(Widget):
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             if self.debug_hitbox:
-                self.enemy.update_hitbox_debug()
+                self.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
         self.score = 0
         self.stage_number = 1
-        self.health = self.initial_player_hp
+        self.player_health = self.initial_player_hp
+        self.player_max_health = self.initial_player_hp
         self.player_attacks.clear()
         self.enemy_attacks.clear()
         if self.boss:
@@ -295,8 +361,11 @@ class Game(Widget):
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
-            self.health = self.player.health
+            self.player_health = self.player.health
+            self.player_max_health = self.player.max_health
+            self.player.bind(health=self.on_player_health_changed)
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+        self.update_hp_hearts()  # Reset hearts

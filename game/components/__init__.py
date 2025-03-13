@@ -1,5 +1,5 @@
 from .attack import Attack, ProjectileAttack, EnemyProjectile
-from .player import Character
+from .player import Player, Character
 from .dino import Dino
 from .enemy import Enemy
 from .obstacle import Obstacle

@@ -26,7 +26,6 @@ class Character(Widget):
         self.debug_hitbox_visible = False
         self.debug_hitbox_instruction = None
         self.rect_instruction = None
-        self.hp_bar_instruction = None  # For HP bar
         try:
             self.load_animations(gif_path)
             Clock.schedule_interval(self.update_frame, 0.1)
@@ -35,7 +34,6 @@ class Character(Widget):
             self.texture = None
             self.load_fallback()
         self.update_graphics()
-        self.update_hp_bar()
 
     def load_animations(self, gif_path: str):
         self.frames = GifLoader.load_gif_frames(gif_path)
@@ -73,7 +71,6 @@ class Character(Widget):
     def move(self):
         self.pos = Vector(*self.velocity) + self.pos
         self.x = max(0, min(self.x, Window.width - self.width))
-        self.update_hp_bar()
 
     def on_velocity_x(self, instance, value: float):
         self.facing_right = value >= 0
@@ -107,26 +104,12 @@ class Character(Widget):
         if self.rect_instruction:
             self.rect_instruction.pos = self.pos
             self.rect_instruction.size = self.size
-        self.update_hp_bar()
 
     def take_damage(self, damage):
-        """Reduce health and update HP bar."""
+        """Reduce health and let binding handle UI update."""
         self.health = max(0, self.health - damage)
-        self.update_hp_bar()
         if self.health <= 0:
             print("Player has died!")
-
-    def update_hp_bar(self):
-        """Draw or update the HP bar above the character."""
-        if self.hp_bar_instruction:
-            self.canvas.after.remove(self.hp_bar_instruction)
-        hp_width = (self.health / self.max_health) * self.width  # Scale bar width
-        with self.canvas.after:
-            Color(0, 1, 0, 1)  # Green for player
-            self.hp_bar_instruction = Rectangle(
-                pos=(self.x, self.y + self.height + 5),  # 5 pixels above
-                size=(hp_width, 5)  # 5 pixels high
-            )
 
 class Player(Character):
     def __init__(self, health=3, **kwargs):
