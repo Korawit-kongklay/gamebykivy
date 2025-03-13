@@ -29,8 +29,11 @@ class Enemy(Character):
         self.wander_duration = random.uniform(2.0, 5.0)
         self.last_jump_time = 0
         self.next_jump_interval = random.uniform(2.0, 3.0)
+        # Initialize hp_bar_instruction as None
+        self.hp_bar_instruction = None
+        # Call update_hp_bar after initialization
+        self.update_hp_bar()
         Clock.schedule_interval(self.update_ai, 1.0 / 30.0)
-        self.update_hp_bar()  # Initialize HP bar
 
     def move(self):
         new_pos = Vector(*self.velocity) + self.pos
@@ -49,7 +52,7 @@ class Enemy(Character):
 
     def update_ai(self, dt):
         if not self.target or not self.parent:
-#            print("Enemy: No target or parent assigned.")
+            # print("Enemy: No target or parent assigned.")
             return
 
         player_center_x = self.target.x + self.target.width / 2
@@ -82,10 +85,11 @@ class Enemy(Character):
         elif self.velocity_x < 0:
             self.facing_right = False
 
-#        print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
-#              f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
-#              f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
-#              f"Health: {self.health}")
+        # Uncomment for debugging
+        # print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
+        #       f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
+        #       f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
+        #       f"Health: {self.health}")
 
     def chase_player(self, dx, dy, distance):
         if abs(dx) > 5:
@@ -171,7 +175,8 @@ class Enemy(Character):
 
     def update_hp_bar(self):
         """Draw or update the HP bar above the enemy."""
-        if self.hp_bar_instruction:
+        # Ensure hp_bar_instruction exists before removing it
+        if hasattr(self, 'hp_bar_instruction') and self.hp_bar_instruction:
             self.canvas.after.remove(self.hp_bar_instruction)
         hp_width = (self.health / self.max_health) * self.width  # Scale bar width
         with self.canvas.after:
