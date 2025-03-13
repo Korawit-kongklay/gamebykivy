@@ -42,33 +42,31 @@ class Stage(Widget):
             self.platforms.append(platform)
 
     def spawn_obstacles(self, dt=None):
-        """Spawn enemies with greater initial separation."""
+        """Spawn one enemy with minimum separation."""
         if not self.spawn_obstacles_enabled:
             return
-        min_separation = 150  # Minimum distance between enemies
+        min_separation = 150
         attempts = 0
-        max_attempts = 10  # Prevent infinite loop
-        for _ in range(5):  # Still spawn 5 enemies
-            while attempts < max_attempts:
-                x = random.uniform(0, Window.width - 50)
-                y = random.uniform(50, Window.height - 50)
-                too_close = False
-                for enemy in self.obstacles:
-                    dx = enemy.x - x
-                    dy = enemy.y - y
-                    if Vector(dx, dy).length() < min_separation:
-                        too_close = True
-                        break
-                if not too_close:
-                    enemy = Enemy()
-                    enemy.x = x
-                    enemy.y = y
-                    self.add_widget(enemy)
-                    self.obstacles.append(enemy)
-                    print(f"Spawned enemy at {enemy.pos}, parent: {enemy.parent}")
+        max_attempts = 10
+        while attempts < max_attempts:
+            x = random.uniform(0, Window.width - 50)
+            y = random.uniform(50, Window.height - 50)
+            too_close = False
+            for enemy in self.obstacles:
+                dx = enemy.x - x
+                dy = enemy.y - y
+                if Vector(dx, dy).length() < min_separation:
+                    too_close = True
                     break
-                attempts += 1
-            attempts = 0  # Reset for next enemy
+            if not too_close:
+                enemy = Enemy()
+                enemy.x = x
+                enemy.y = y
+                self.add_widget(enemy)
+                self.obstacles.append(enemy)
+                print(f"Spawned enemy at {enemy.pos}, parent: {enemy.parent}")
+                break
+            attempts += 1
 
     def update(self, dt):
         if not self.spawn_obstacles_enabled:
