@@ -1,2 +1,3 @@
 #ignore python cache files
 game/components/__pycache__/*
+game/__pycache__/*

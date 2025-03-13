@@ -13,75 +13,104 @@ class Stage(Widget):
     obstacles = ListProperty([])  # Holds Enemy instances
     platforms = ListProperty([])
 
+    # Platform generation constants
+    BASE_WIDTH = 1280
+    BASE_HEIGHT = 720
+    PLATFORM_WIDTH = 93
+    PLATFORM_HEIGHT = 24
+    BUFFER_ZONE = 20  # Minimum distance between platforms
+    NUM_PLATFORMS = 15
+    MAX_ATTEMPTS = 1000
+
     def __init__(self, stage_number=1, spawn_obstacles=False, **kwargs):
         super().__init__(**kwargs)
         self.stage_number = stage_number
         self.spawn_obstacles_enabled = spawn_obstacles
         self.spawn_platforms()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
+        # Bind to window size changes
+        Window.bind(on_resize=self.on_window_resize)
 
     def spawn_platforms(self):
-        """Spawn platforms with predefined positions for each stage."""
-        platform_configs = {
-    1: [  # Stage 1: Simple layout with a few platforms
-        (200, 100),  # Middle-left platform (200 - 100 = 100)
-        (400, 150),  # Middle-right platform (250 - 100 = 150)
-        (600, 100),  # Far-right platform (200 - 100 = 100)
-        (300, 250),  # Upper-middle platform (350 - 100 = 250)
-    ],
-    2: [  # Stage 2: More platforms, some vertical progression
-        (150, 0),    # Lower-left (100 - 100 = 0)
-        (300, 100),  # Middle step (200 - 100 = 100)
-        (450, 200),  # Higher step (300 - 100 = 200)
-        (600, 100),  # Right-middle (200 - 100 = 100)
-        (200, 300),  # Upper-left (400 - 100 = 300)
-    ],
-    3: [  # Stage 3: Zig-zag pattern
-        (100, 50),   # Bottom-left (150 - 100 = 50)
-        (250, 150),  # Middle step up (250 - 100 = 150)
-        (400, 100),  # Middle step down (200 - 100 = 100)
-        (550, 200),  # Right step up (300 - 100 = 200)
-        (700, 150),  # Far-right step down (250 - 100 = 150)
-        (300, 300),  # Upper-middle (400 - 100 = 300)
-    ],
-    4: [  # Stage 4: Complex layout with gaps
-        (50, 0),     # Bottom-left (100 - 100 = 0)
-        (200, 50),   # Left step (150 - 100 = 50)
-        (350, 200),  # Middle-high (300 - 100 = 200)
-        (500, 100),  # Middle-right (200 - 100 = 100)
-        (650, 250),  # Right-high (350 - 100 = 250)
-        (150, 350),  # Upper-left (450 - 100 = 350)
-        (450, 400),  # Upper-middle (500 - 100 = 400)
-    ],
-    5: [  # Stage 5: Challenging layout with spread platforms
-        (50, 100),   # Left-middle (200 - 100 = 100)
-        (200, 200),  # Left-high step (300 - 100 = 200)
-        (350, 50),   # Middle-low (150 - 100 = 50)
-        (500, 250),  # Middle-high (350 - 100 = 250)
-        (650, 150),  # Right-middle (250 - 100 = 150)
-        (100, 400),  # Upper-left (500 - 100 = 400)
-        (300, 350),  # Upper-middle (450 - 100 = 350)
-        (600, 300),  # Upper-right (400 - 100 = 300)
-    ]
-}
-
-        # Use predefined config for the current stage, fallback to random if stage > 5
-        config = platform_configs.get(self.stage_number, [
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24))
-            for _ in range(8)  # Default to 8 random platforms if beyond stage 5
-        ])
-
+        """Spawn random platforms with positions and sizes relative to window dimensions."""
         self.platforms.clear()
-        for x, y in config:
-            platform = Platform(pos=(x, y), size=(93, 24))
+
+        # Calculate scaling factors based on current window size
+        width_scale = Window.width / self.BASE_WIDTH
+        height_scale = Window.height / self.BASE_HEIGHT
+        platform_width = self.PLATFORM_WIDTH * width_scale
+        platform_height = self.PLATFORM_HEIGHT * height_scale
+        buffer_zone = self.BUFFER_ZONE * width_scale  # Scale buffer zone dynamically
+
+        # Generate random platforms
+        platforms = self.generate_random_platforms(
+            num_platforms=self.NUM_PLATFORMS,
+            platform_width=platform_width,
+            platform_height=platform_height,
+            buffer_zone=buffer_zone
+        )
+
+        # Add platforms to the stage
+        for x, y in platforms:
+            platform = Platform(pos=(x, y), size=(platform_width, platform_height))
             self.add_widget(platform)
             self.platforms.append(platform)
+
+        print(f"Stage {self.stage_number}: Generated {len(platforms)} platforms")
+
+    def generate_random_platforms(self, num_platforms, platform_width, platform_height, buffer_zone):
+        """Generate random, non-overlapping platform positions."""
+        platforms = []
+
+        for _ in range(num_platforms):
+            attempts = 0
+            while attempts < self.MAX_ATTEMPTS:
+                # Generate positions within window bounds, accounting for buffer
+                x = random.uniform(buffer_zone, Window.width - platform_width - buffer_zone)
+                y = random.uniform(buffer_zone, Window.height - platform_height - buffer_zone)
+                new_platform = (x, y)
+
+                if not self.check_overlap(new_platform, platforms, platform_width, platform_height, buffer_zone):
+                    platforms.append(new_platform)
+                    break
+
+                attempts += 1
+
+            if attempts >= self.MAX_ATTEMPTS:
+                print(f"Stage {self.stage_number}: Could only place {len(platforms)} platforms due to spacing constraints")
+                break
+
+        return platforms
+
+    def check_overlap(self, new_platform, existing_platforms, platform_width, platform_height, buffer_zone):
+        """Check if new_platform overlaps with or is too close to existing platforms."""
+        new_x, new_y = new_platform
+        new_right = new_x + platform_width + buffer_zone
+        new_top = new_y + platform_height + buffer_zone
+        new_left = new_x - buffer_zone
+        new_bottom = new_y - buffer_zone
+
+        for (x, y) in existing_platforms:
+            right = x + platform_width + buffer_zone
+            top = y + platform_height + buffer_zone
+            left = x - buffer_zone
+            bottom = y - buffer_zone
+
+            # Check if rectangles (with buffer) overlap
+            if (new_left < right and new_right > left and
+                new_bottom < top and new_top > bottom):
+                return True
+        return False
+
+    def on_window_resize(self, window, width, height):
+        """Update platform positions and sizes when window is resized."""
+        self.spawn_platforms()  # Respawn platforms with new scaling
 
     def spawn_obstacles(self, dt=None):
         """Spawn one enemy with minimum separation."""
         if not self.spawn_obstacles_enabled:
             return
-        min_separation = 150
+        min_separation = 150 * (Window.width / self.BASE_WIDTH)  # Scale separation dynamically
         attempts = 0
         max_attempts = 10
         while attempts < max_attempts:
