@@ -1,6 +1,7 @@
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
+from kivy.app import App
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -126,7 +127,7 @@ class Game(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active:
             return False
-        if keycode[1] == 'escape':  # Pause game with ESC
+        if keycode[1] == 'escape':  # เพิ่มการจัดการ ESC
             self.game_active = False
             self.show_pause_menu()
             return True
@@ -435,5 +436,5 @@ class Game(Widget):
         from .pause_menu import PauseMenu
         app = App.get_running_app()
         app.root.clear_widgets()
-        pause_menu = PauseMenu(self)  # Pass Game instance to PauseMenu
-        app.root.add_widget(pause_menu)
+        pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
+        app.root.add_widget(pause_menu)   
