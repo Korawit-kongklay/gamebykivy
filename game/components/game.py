@@ -154,6 +154,7 @@ class Game(Widget):
         if self.health <= 0:
             self.game_active = False
             print("Game Over!")
+            self.music_manager.fade_out_music(duration=1.0)
 
     def next_stage(self):
         """Advance to the next stage when all enemies are cleared."""
