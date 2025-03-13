@@ -13,7 +13,6 @@ class MainMenu(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = 50
         self.spacing = 20
         self.music_manager = MusicManager()
         self.menu_music_volume = 1.0  # เก็บค่า volume สำหรับ background music
@@ -24,7 +23,7 @@ class MainMenu(BoxLayout):
         
         # Title
         self.add_widget(Label(
-            text='Dino Game',
+            text='DinoCon',
             font_size=48,
             size_hint=(1, 0.4)
         ))
