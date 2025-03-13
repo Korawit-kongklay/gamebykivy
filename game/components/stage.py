@@ -22,7 +22,7 @@ class Stage(Widget):
 
     def spawn_platforms(self):
         platform_configs = {
-            1: [(200, 200), (293, 150), (386, 150), (450, 250), (543, 250), (100, 350), (193, 350), (286, 350)],
+            1: [(200, 200), (293, 150), (386, 150), (479, 100), (450, 250), (543, 250), (100, 350), (193, 350), (286, 350)],
             2: [(150, 100), (400, 200), (300, 350), (600, 300)]
         }.get(self.stage_number, [
             (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),

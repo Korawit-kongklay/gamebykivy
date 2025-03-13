@@ -51,6 +51,7 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.health = 3
+        self.on_platform = False  # Track if player is on a platform
 
     def bind_inputs(self):
         """Bind keyboard and mouse inputs for player control."""
@@ -80,7 +81,7 @@ class Game(Widget):
             return False
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
-                self.player.velocity_y = 7
+                self.player.velocity_y = 6
         elif keycode[1] in ('left', 'a'):
             self.player.velocity_x = -5
         elif keycode[1] in ('right', 'd'):
@@ -127,7 +128,8 @@ class Game(Widget):
         if self.ENABLE_PLAYER and self.player:
             self.apply_gravity(self.player)
             self.player.move()
-            self.handle_platform_collision(self.player)
+            self.on_platform = self.handle_platform_collision(self.player)  # Update on_platform status
+            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -168,35 +170,50 @@ class Game(Widget):
 
     def can_jump(self, entity):
         """Check if an entity can jump."""
-        on_ground = entity.y == 0
+        on_ground = entity.y <= 0
         on_platform = self.is_on_platform(entity)
         return (on_ground or on_platform) and abs(entity.velocity_y) < 0.01
 
     def is_on_platform(self, entity):
-        """Check if an entity is on a platform."""
+        """Check if an entity is standing on a platform (landed from above)."""
         entity_rect = entity.get_hitbox_rect()
         for platform in self.stage.platforms:
             plat_rect = platform.get_hitbox_rect()
             if Hitbox.collide(entity_rect, plat_rect) and entity.velocity_y <= 0:
+                # Check if the entity's feet are within a small range above the platform's top
                 distance = plat_rect['top'] - entity_rect['y']
-                if -5 <= distance <= 10:
+                if -5 <= distance <= 10:  # Allow a small margin for landing
                     return True
         return False
 
     def handle_platform_collision(self, entity):
         """Handle collision between an entity and platforms."""
         entity_rect = entity.get_hitbox_rect()
+        on_platform = False
+        entity_prev_y = entity.y + entity.velocity_y  # Approximate previous y position
+
         for platform in self.stage.platforms:
             plat_rect = platform.get_hitbox_rect()
-            if Hitbox.collide(entity_rect, plat_rect) and entity.velocity_y <= 0:
-                entity.y = plat_rect['top'] - entity.hitbox.offset_y
-                entity.velocity_y = 0
-                return True
+            if Hitbox.collide(entity_rect, plat_rect):
+                # Case 1: Landing on top (descending)
+                if entity.velocity_y <= 0 and entity_prev_y + entity_rect['height'] > plat_rect['top']:
+                    distance = plat_rect['top'] - entity_rect['y']
+                    if -5 <= distance <= 10:  # Player lands on top
+                        entity.y = plat_rect['top'] - entity.hitbox.offset_y
+                        entity.velocity_y = 0
+                        on_platform = True
+                        continue
+                # Case 2: Side or bottom collision - allow passing through
+                # No adjustment to velocity or position; let the player pass through
+                continue
+
+        # Handle ground collision (y <= 0)
         if entity.y <= 0:
             entity.y = 0
             entity.velocity_y = 0
-            return True
-        return False
+            on_platform = True  # Treat ground as a platform for jumping purposes
+
+        return on_platform
 
     def update_attacks(self):
         """Update player and enemy attacks."""
