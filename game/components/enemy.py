@@ -6,6 +6,7 @@ from kivy.clock import Clock
 from kivy.graphics import Rectangle, Color
 from .player import Character
 import random
+import math
 
 class Enemy(Character):
     velocity_x = NumericProperty(0)
@@ -84,12 +85,6 @@ class Enemy(Character):
             self.facing_right = True
         elif self.velocity_x < 0:
             self.facing_right = False
-
-        # Uncomment for debugging
-        # print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
-        #       f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
-        #       f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
-        #       f"Health: {self.health}")
 
     def chase_player(self, dx, dy, distance):
         if abs(dx) > 5:
@@ -185,3 +180,103 @@ class Enemy(Character):
                 pos=(self.x, self.y + self.height + 5),  # 5 pixels above
                 size=(hp_width, 5)  # 5 pixels high
             )
+
+class FlyingEnemy(Enemy):
+    """An enemy that flies along the Y-axis and passes through platforms."""
+    base_y = NumericProperty(0)  # Base Y position for oscillation
+    fly_amplitude = NumericProperty(50)  # Height of vertical oscillation
+    fly_frequency = NumericProperty(1.0)  # Speed of oscillation
+
+    def __init__(self, gif_path: str = 'assets/gifs/fy.gif', size: tuple = (80, 80), health=50, **kwargs):
+        super().__init__(gif_path=gif_path, size=size, health=health, **kwargs)
+        self.move_speed = 2.0  # Slightly slower horizontal speed
+        self.vision_range = 300  # Wider vision for flying enemy
+        self.attack_range = 150  # Longer attack range
+        self.base_y = self.y  # Initial Y position as base for oscillation
+        self.time = 0  # Time variable for sinusoidal movement
+        Clock.schedule_interval(self.update_flying, 1.0 / 60.0)  # Faster update for smooth flying
+
+    def move(self):
+        """Move horizontally, with vertical movement handled by update_flying."""
+        new_pos = Vector(self.velocity_x, 0) + self.pos  # Only apply horizontal velocity here
+        if new_pos[0] < 0:
+            self.velocity_x = abs(self.velocity_x)
+            self.facing_right = True
+            new_pos[0] = 0
+        elif new_pos[0] > Window.width - self.width:
+            self.velocity_x = -abs(self.velocity_x)
+            self.facing_right = False
+            new_pos[0] = Window.width - self.width
+        self.pos = new_pos
+        if self.debug_hitbox_visible:
+            self.update_hitbox_debug()
+        self.update_hp_bar()
+
+    def update_flying(self, dt):
+        """Update vertical position with sinusoidal oscillation."""
+        self.time += dt
+        self.y = self.base_y + math.sin(self.time * self.fly_frequency) * self.fly_amplitude
+        self.update_hp_bar()  # Ensure HP bar follows the flying enemy
+
+    def update_ai(self, dt):
+        """Override AI to handle flying behavior."""
+        if not self.target or not self.parent:
+            return
+
+        player_center_x = self.target.x + self.target.width / 2
+        self_center_x = self.x + self.width / 2
+        dx = player_center_x - self_center_x
+        distance = abs(dx) or 0.001
+
+        player_in_vision = distance <= self.vision_range and (
+            (self.facing_right and dx > 0) or (not self.facing_right and dx < 0)
+        )
+
+        if player_in_vision:
+            self.chase_player(dx, distance)
+        else:
+            self.wander(dt)
+
+        self.avoid_clumping()
+
+        current_time = Clock.get_time()
+        if distance <= self.attack_range and (current_time - self.last_attack_time >= self.attack_cooldown):
+            self.attack()
+            self.last_attack_time = current_time
+
+        if self.velocity_x > 0:
+            self.facing_right = True
+        elif self.velocity_x < 0:
+            self.facing_right = False
+
+    def chase_player(self, dx, distance):
+        """Chase player horizontally, vertical handled by flying."""
+        if abs(dx) > 5:
+            normalized_dx = dx / distance
+            self.velocity_x = normalized_dx * self.move_speed
+        else:
+            self.velocity_x = 0
+        # Update base_y to follow player's Y position slightly
+        self.base_y = self.target.y + self.target.height / 2 - self.height / 2
+
+    def wander(self, dt):
+        """Wander horizontally, vertical handled by flying."""
+        self.wander_timer += dt
+        if self.wander_target is None or self.wander_timer >= self.wander_duration:
+            self.wander_target = (
+                random.uniform(0, Window.width - self.width),
+                self.y  # Keep Y constant for wander, oscillation handles vertical
+            )
+            self.wander_timer = 0
+            self.wander_duration = random.uniform(2.0, 5.0)
+
+        target_x, _ = self.wander_target
+        self_center_x = self.x + self.width / 2
+        dx = target_x - self_center_x
+        distance = abs(dx) or 0.001
+
+        if distance < 10:
+            self.velocity_x = 0
+        else:
+            normalized_dx = dx / distance
+            self.velocity_x = normalized_dx * self.move_speed * 0.7

@@ -21,78 +21,37 @@ class Stage(Widget):
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
     def spawn_platforms(self):
-        """Spawn platforms with predefined positions for each stage."""
-        platform_configs = {
-    1: [  # Stage 1: Adjusted to match the image with ~21 platforms
-        (200, 100),
-        (293, 100),  
-        (400, 150),  
-        (600, 100),
-        (693, 76),  
-        (300, 250),
-        (393, 274),  
-        (486, 298),
-        (765, 298),
-        (858, 274),  
-        (700, 500),
-        (607, 500),
-        (514, 500),
-        (421, 500),   
-        (0, 400),
-        (93, 400),
-        (186, 424),
-        (1187, 576),
-        (1187, 176),
-        (1094, 152),
-        (1001, 128),
-        (1094, 552),
-        (1001, 528),
-        (908, 528),
-    ],
-    2: [  # Stage 2: More platforms, some vertical progression
-        (150, 0),    # Lower-left (100 - 100 = 0)
-        (300, 100),  # Middle step (200 - 100 = 100)
-        (450, 200),  # Higher step (300 - 100 = 200)
-        (600, 100),  # Right-middle (200 - 100 = 100)
-        (200, 300),  # Upper-left (400 - 100 = 300)
-    ],
-    3: [  # Stage 3: Zig-zag pattern
-        (100, 50),   # Bottom-left (150 - 100 = 50)
-        (250, 150),  # Middle step up (250 - 100 = 150)
-        (400, 100),  # Middle step down (200 - 100 = 100)
-        (550, 200),  # Right step up (300 - 100 = 200)
-        (700, 150),  # Far-right step down (250 - 100 = 150)
-        (300, 300),  # Upper-middle (400 - 100 = 300)
-    ],
-    4: [  # Stage 4: Complex layout with gaps
-        (50, 0),     # Bottom-left (100 - 100 = 0)
-        (200, 50),   # Left step (150 - 100 = 50)
-        (350, 200),  # Middle-high (300 - 100 = 200)
-        (500, 100),  # Middle-right (200 - 100 = 100)
-        (650, 250),  # Right-high (350 - 100 = 250)
-        (150, 350),  # Upper-left (450 - 100 = 350)
-        (450, 400),  # Upper-middle (500 - 100 = 400)
-    ],
-    5: [  # Stage 5: Challenging layout with spread platforms
-        (50, 100),   # Left-middle (200 - 100 = 100)
-        (200, 200),  # Left-high step (300 - 100 = 200)
-        (350, 50),   # Middle-low (150 - 100 = 50)
-        (500, 250),  # Middle-high (350 - 100 = 250)
-        (650, 150),  # Right-middle (250 - 100 = 150)
-        (100, 400),  # Upper-left (500 - 100 = 400)
-        (300, 350),  # Upper-middle (450 - 100 = 350)
-        (600, 300),  # Upper-right (400 - 100 = 300)
-    ]
-}
-
-        # Use predefined config for the current stage, fallback to random if stage > 5
-        config = platform_configs.get(self.stage_number, [
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24))
-            for _ in range(8)  # Default to 8 random platforms if beyond stage 5
-        ])
+        """Spawn platforms with a fixed configuration for all stages."""
+        platform_config = [
+            # Using Stage 1's configuration for all stages (~21 platforms)
+            (200, 100),
+            (293, 100),  
+            (400, 150),  
+            (600, 100),
+            (693, 76),  
+            (300, 250),
+            (393, 274),  
+            (486, 298),
+            (765, 298),
+            (858, 274),  
+            (700, 500),
+            (607, 500),
+            (514, 500),
+            (421, 500),   
+            (0, 400),
+            (93, 400),
+            (186, 424),
+            (1187, 576),
+            (1187, 176),
+            (1094, 152),
+            (1001, 128),
+            (1094, 552),
+            (1001, 528),
+            (908, 528),
+        ]
 
         self.platforms.clear()
-        for x, y in config:
+        for x, y in platform_config:
             platform = Platform(pos=(x, y), size=(93, 24))
             self.add_widget(platform)
             self.platforms.append(platform)

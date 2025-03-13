@@ -10,7 +10,7 @@ from .player import Player
 from .stage import Stage
 from .hitbox import Hitbox
 from .boss import Boss
-from .enemy import Enemy
+from .enemy import Enemy, FlyingEnemy  # Import FlyingEnemy
 from .attack import ProjectileAttack
 from .portal import Portal
 import random  # For random positioning
@@ -87,14 +87,18 @@ class Game(Widget):
         self.update_hp_hearts()  # Set up initial heart display
 
     def spawn_initial_enemies(self):
-        """Spawn initial enemies at random positions based on stage number."""
+        """Spawn initial enemies at random positions based on stage number, including FlyingEnemy."""
         enemy_count = 5 + (self.stage_number - 1)  # Stage 1: 5, Stage 2: 6, etc.
         self.stage.obstacles.clear()  # Clear existing obstacles
         enemy_size = (80, 80)
         for _ in range(enemy_count):
             spawn_x = random.uniform(0, Window.width - enemy_size[0])
             spawn_y = random.uniform(0, Window.height - enemy_size[1])
-            enemy = Enemy(pos=(spawn_x, spawn_y))
+            # 30% chance to spawn FlyingEnemy, 70% chance for regular Enemy
+            if random.random() < 0.3:
+                enemy = FlyingEnemy(pos=(spawn_x, spawn_y))
+            else:
+                enemy = Enemy(pos=(spawn_x, spawn_y))
             self.stage.add_widget(enemy)
             self.stage.obstacles.append(enemy)
 
@@ -104,9 +108,9 @@ class Game(Widget):
             self.remove_widget(self.portal)
         portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 80))
         portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 240))
-        self.portal = Portal(pos=(portal_x, portal_y), player=self.player)
+        self.portal = Portal(pos=(portal_x, portal_y))
         self.add_widget(self.portal)
-        print(f"Portal spawned at {self.portal.pos} (last enemy death position), facing player at spawn")
+        print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
 
     def _update_hp_position(self, instance, value):
         """Update heart positions when hp_layout moves."""
@@ -214,7 +218,7 @@ class Game(Widget):
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
             self.player_health = self.player.health
-            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
+            #print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -380,9 +384,13 @@ class Game(Widget):
 
     def update_enemies(self):
         for enemy in self.stage.obstacles[:]:
-            self.apply_gravity(enemy)
-            enemy.move()
-            self.handle_platform_collision(enemy)
+            if isinstance(enemy, FlyingEnemy):
+                # Flying enemies don't need gravity or platform collision
+                enemy.move()
+            else:
+                self.apply_gravity(enemy)
+                enemy.move()
+                self.handle_platform_collision(enemy)
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.player.take_damage(1)
                 self.last_enemy_death_pos = [enemy.x, enemy.y]
@@ -437,4 +445,4 @@ class Game(Widget):
         app = App.get_running_app()
         app.root.clear_widgets()
         pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
-        app.root.add_widget(pause_menu)   
+        app.root.add_widget(pause_menu)
