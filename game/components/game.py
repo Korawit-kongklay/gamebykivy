@@ -1,6 +1,8 @@
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
+from kivy.uix.button import Button
+from kivy.uix.label import Label  # เพิ่มการ import Label
 from kivy.app import App
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
@@ -44,6 +46,8 @@ class Game(Widget):
         self.hp_layout = None  # Will hold the BoxLayout for hearts
         self.music_manager = MusicManager()
         self.walk_sound_playing = False  # To control walk sound looping
+        self.restart_button = None  # ตัวแปรสำหรับปุ่ม restart
+        self.end_game_label = None  # ตัวแปรสำหรับข้อความ Victory/Game Over
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
@@ -205,6 +209,47 @@ class Game(Widget):
             blank = Image(source='assets/images/blank_heart.png', size=(50, 50), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(blank)
 
+    def show_restart_button(self, game_over=False, game_completed=False):
+        """Show a large restart button and end-game message in the center of the screen."""
+        # ลบปุ่มและข้อความเก่าถ้ามี
+        if self.restart_button:
+            self.remove_widget(self.restart_button)
+            self.restart_button = None
+        if self.end_game_label:
+            self.remove_widget(self.end_game_label)
+            self.end_game_label = None
+        
+        # เพิ่มข้อความ Victory หรือ Game Over
+        self.end_game_label = Label(
+            text='Victory!' if game_completed else 'Game Over!',
+            font_size=100,  # ขนาดตัวอักษรใหญ่
+            size_hint=(None, None),
+            size=(300, 100),
+            pos=(Window.width / 2 - 150, Window.height / 2 + 75),  # เหนือปุ่ม Restart
+            color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)  # เขียวถ้าชนะ แดงถ้าแพ้
+        )
+        self.add_widget(self.end_game_label)
+        
+        # สร้างปุ่ม restart ขนาดใหญ่
+        self.restart_button = Button(
+            text='Restart Game',
+            size_hint=(None, None),
+            size=(300, 100),  # ขนาดใหญ่
+            pos=(Window.width / 2 - 150, Window.height / 2 - 50),  # อยู่กลางจอ
+            font_size=30,  # ขนาดตัวอักษรใหญ่
+            background_color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)  # เขียวถ้าชนะ แดงถ้าแพ้
+        )
+        
+        # ผูกปุ่มกับการรีสตาร์ท
+        if game_over:
+            self.restart_button.bind(on_press=lambda instance: self.restart(game_over=True))
+        elif game_completed:
+            self.restart_button.bind(on_press=lambda instance: self.restart(game_completed=True))
+        else:
+            self.restart_button.bind(on_press=lambda instance: self.restart())
+        
+        self.add_widget(self.restart_button)
+
     def update(self, dt):
         if not self.game_active:
             return
@@ -251,12 +296,15 @@ class Game(Widget):
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
             print("Game Completed! All stages cleared!")
+            self.music_manager.fade_out_music(duration=1.0)
+            self.show_restart_button(game_completed=True)  # แสดงปุ่มและข้อความ
 
         if self.player_health <= 0:
             self.game_active = False
             print("Game Over!")
-            self.music_manager.play_die()  # Play die sound
-            self.music_manager.fade_out_music(duration=1.0)  # Fade out music
+            self.music_manager.play_die()  # เล่นเสียงตาย
+            self.music_manager.fade_out_music(duration=1.0)
+            self.show_restart_button(game_over=True)  # แสดงปุ่มและข้อความ
 
     def next_stage(self):
         """Advance to the next stage."""
@@ -395,7 +443,34 @@ class Game(Widget):
             if self.debug_hitbox:
                 enemy.update_hitbox_debug()
 
-    def restart(self):
+    def restart(self, game_over=False, game_completed=False):
+        """
+        Restart the game with appropriate messaging based on game state.
+        
+        Args:
+            game_over (bool): True if restarting due to player death
+            game_completed (bool): True if restarting after clearing all stages
+        """
+        # ลบปุ่มและข้อความเก่า
+        if self.restart_button:
+            self.remove_widget(self.restart_button)
+            self.restart_button = None
+        if self.end_game_label:
+            self.remove_widget(self.end_game_label)
+            self.end_game_label = None
+        
+        # หยุดเพลงปัจจุบันก่อนเริ่มใหม่
+        self.music_manager.fade_out_music(duration=0.5)
+        
+        # แสดงข้อความตามสถานะเกม
+        if game_over:
+            print("Game Over! Restarting game...")
+        elif game_completed:
+            print(f"Congratulations! You've cleared all {self.MAX_STAGES} stages! Restarting game...")
+        else:
+            print("Restarting game...")
+
+        # รีเซ็ตสถานะเกม
         self.game_active = True
         self.score = 0
         self.stage_number = 1
@@ -403,20 +478,30 @@ class Game(Widget):
         self.player_max_health = self.initial_player_hp
         self.player_attacks.clear()
         self.enemy_attacks.clear()
+        
+        # ลบ boss ถ้ามี
         if self.boss:
             self.remove_widget(self.boss)
             self.boss = None
+        
+        # ลบ portal ถ้ามี
         if self.portal:
             self.remove_widget(self.portal)
             self.portal = None
+        
+        # รีเซ็ต stage
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
+        
+        # สร้างศัตรูใหม่ถ้าเปิดใช้งาน
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                self.music_manager.play_spawn()  # Play spawn sound for enemies
+                self.music_manager.play_spawn()  # เล่นเสียง spawn สำหรับศัตรู
+        
+        # รีเซ็ต player
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
@@ -427,9 +512,15 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        self.last_enemy_death_pos = [Window.width - 60, 10]  # Reset to default
+        
+        # รีเซ็ตตำแหน่งการตายล่าสุดของศัตรู
+        self.last_enemy_death_pos = [Window.width - 60, 10]
+        
+        # อัพเดท UI
         self.update_hp_hearts()
-        self.music_manager.play_music(self.stage_number)
+        
+        # เริ่มเพลงใหม่หลังจากรีเซ็ตทุกอย่างเสร็จสิ้น
+        Clock.schedule_once(lambda dt: self.music_manager.play_music(self.stage_number), 0.6)  # หน่วงเวลาเล็กน้อยหลัง fade out
 
     def show_pause_menu(self):
         """Show the pause menu."""
@@ -437,4 +528,4 @@ class Game(Widget):
         app = App.get_running_app()
         app.root.clear_widgets()
         pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
-        app.root.add_widget(pause_menu)   
+        app.root.add_widget(pause_menu)
