@@ -34,11 +34,35 @@
             pos: self.pos
             size: self.size
             source: 'assets/gifs/darkforest.gif'
+    # Player HP Bar (Green) at top-left
+    BoxLayout:
+        pos: 10, root.height - 30  # 10px from left, 30px from top
+        size_hint: None, None
+        size: 100, 20  # Fixed size for the HP bar container
+        canvas.before:
+            Color:
+                rgba: 0.2, 0.2, 0.2, 1  # Gray background for full bar
+            Rectangle:
+                pos: self.pos
+                size: self.size
+            Color:
+                rgba: 0, 1, 0, 1  # Green for health
+            Rectangle:
+                pos: self.pos
+                size: (self.width * (root.player.health / root.player.max_health) if root.player else 0, self.height)
+        Label:
+            text: f'HP: {root.player.health if root.player else 0}/{root.player.max_health if root.player else 0}'
+            font_size: 14
+            color: 1, 1, 1, 1
+            size: self.texture_size
+            pos: self.parent.pos[0] + 5, self.parent.pos[1] + 2
+    # Stage, Score, and Health Label (moved to top-right)
     Label:
-        text: f'Stage: {root.stage_number} Score: {root.score:.1f} Health: {root.health}'
+        text: f'Stage: {root.stage_number} Score: {root.score:.1f}'
         font_size: 20
         top: root.top - 10
         right: root.right - 10
+    # Restart Button
     Button:
         text: 'Restart'
         size_hint: 0.2, 0.1

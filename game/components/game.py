@@ -19,7 +19,7 @@ class Game(Widget):
     portal = ObjectProperty(None)  # ตัวแปรสำหรับ portal
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
-    health = NumericProperty(3)
+    health = NumericProperty(3)  # Synced with player.health
     game_active = BooleanProperty(True)
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
@@ -31,8 +31,9 @@ class Game(Widget):
     ENABLE_BOSS = False
     MAX_STAGES = 5  # จำนวน stage สูงสุด
 
-    def __init__(self, **kwargs):
+    def __init__(self, initial_player_hp=100, **kwargs):
         super().__init__(**kwargs)
+        self.initial_player_hp = initial_player_hp
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
@@ -45,18 +46,18 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
         if self.ENABLE_PLAYER:
-            self.player = Player(pos=(100, 0))
+            self.player = Player(pos=(100, 0), health=self.initial_player_hp)
+            self.health = self.player.health
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+#                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
         self.last_boss_attack = 0
         self.mouse_pos = (0, 0)
         self.score = 0
-        self.health = 3
         self.on_platform = False
         self.spawn_portal()  # สร้าง portal ตั้งแต่เริ่มเกม
 
@@ -77,7 +78,6 @@ class Game(Widget):
         self.add_widget(self.portal)
 
     def bind_inputs(self):
-        """Bind keyboard and mouse inputs for player control."""
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self.keyboard.bind(on_key_down=self._on_keyboard_down, on_key_up=self._on_keyboard_up)
         Window.bind(mouse_pos=self._on_mouse_pos)
@@ -139,7 +139,8 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
-            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
+            self.health = self.player.health  # Sync with Player's health
+#            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -193,6 +194,10 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+            self.stage.spawn_obstacles()
+            for enemy in self.stage.obstacles:
+                enemy.target = self.player
+#                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
@@ -245,6 +250,7 @@ class Game(Widget):
                 continue
 
         if entity.y <= 0:
+            self.health = self.player.health
             entity.y = 0
             entity.velocity_y = 0
             on_platform = True
@@ -285,31 +291,30 @@ class Game(Widget):
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
             elif Hitbox.collide(attack.get_hitbox_rect(), self.player.get_hitbox_rect()):
-                self.health -= 1
+                self.player.take_damage(1)
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
 
     def update_enemies(self):
-        """Update all enemies and handle collisions."""
         for enemy in self.stage.obstacles[:]:
             self.apply_gravity(enemy)
             enemy.move()
             self.handle_platform_collision(enemy)
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
-                self.health -= 1
+                self.player.take_damage(1)
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
             if self.debug_hitbox:
-                enemy.update_hitbox_debug()
+                self.enemy.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
         self.score = 0
         self.stage_number = 1
-        self.health = 3
+        self.health = self.initial_player_hp
         self.player_attacks.clear()
         self.enemy_attacks.clear()
         if self.boss:
@@ -324,7 +329,8 @@ class Game(Widget):
             self.spawn_initial_enemies()
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
-            self.player = Player(pos=(100, 0))
+            self.player = Player(pos=(100, 0), health=self.initial_player_hp)
+            self.health = self.player.health
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player

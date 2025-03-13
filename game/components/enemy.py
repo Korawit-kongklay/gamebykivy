@@ -3,6 +3,7 @@ from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProper
 from kivy.vector import Vector
 from kivy.core.window import Window
 from kivy.clock import Clock
+from kivy.graphics import Rectangle, Color
 from .player import Character
 import random
 
@@ -10,16 +11,18 @@ class Enemy(Character):
     velocity_x = NumericProperty(0)
     velocity_y = NumericProperty(0)
     velocity = ReferenceListProperty(velocity_x, velocity_y)
-    target = ObjectProperty(None)  # Player to chase
-    attack_range = NumericProperty(100)  # Distance to attack
-    attack_cooldown = NumericProperty(1.0)  # Seconds between attacks
-    move_speed = NumericProperty(3.0)  # Speed for movement
-    vision_range = NumericProperty(200)  # Distance to detect player
-    facing_right = BooleanProperty(True)  # Direction enemy is facing
-    health = NumericProperty(100)  # Health points for the enemy
+    target = ObjectProperty(None)
+    attack_range = NumericProperty(100)
+    attack_cooldown = NumericProperty(1.0)
+    move_speed = NumericProperty(3.0)
+    vision_range = NumericProperty(200)
+    facing_right = BooleanProperty(True)
+    health = NumericProperty(100)
+    max_health = NumericProperty(100)  # Added for HP bar scaling
 
-    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (80, 80), **kwargs):
-        super().__init__(gif_path=gif_path, size=size, **kwargs)
+    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (80, 80), health=100, **kwargs):
+        super().__init__(gif_path=gif_path, size=size, health=health, **kwargs)
+        self.max_health = health  # Set max_health to initial health
         self.last_attack_time = 0
         self.wander_target = None
         self.wander_timer = 0
@@ -27,9 +30,9 @@ class Enemy(Character):
         self.last_jump_time = 0
         self.next_jump_interval = random.uniform(2.0, 3.0)
         Clock.schedule_interval(self.update_ai, 1.0 / 30.0)
+        self.update_hp_bar()  # Initialize HP bar
 
     def move(self):
-        """Move the enemy based on velocity (gravity applied elsewhere)."""
         new_pos = Vector(*self.velocity) + self.pos
         if new_pos[0] < 0:
             self.velocity_x = abs(self.velocity_x)
@@ -42,11 +45,11 @@ class Enemy(Character):
         self.pos = new_pos
         if self.debug_hitbox_visible:
             self.update_hitbox_debug()
+        self.update_hp_bar()  # Update HP bar position
 
     def update_ai(self, dt):
-        """AI logic with wandering, vision, and spacing behavior."""
         if not self.target or not self.parent:
-            print("Enemy: No target or parent assigned.")
+#            print("Enemy: No target or parent assigned.")
             return
 
         player_center_x = self.target.x + self.target.width / 2
@@ -79,13 +82,12 @@ class Enemy(Character):
         elif self.velocity_x < 0:
             self.facing_right = False
 
-        print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
-              f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
-              f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
-              f"Health: {self.health}")
+#        print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
+#              f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
+#              f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
+#              f"Health: {self.health}")
 
     def chase_player(self, dx, dy, distance):
-        """Chase the player when in vision."""
         if abs(dx) > 5:
             normalized_dx = dx / distance
             self.velocity_x = normalized_dx * self.move_speed
@@ -98,7 +100,6 @@ class Enemy(Character):
             self.last_jump_time = current_time
 
     def wander(self, dt):
-        """Move horizontally to random x positions and jump every 2-3 seconds."""
         self.wander_timer += dt
 
         if self.wander_target is None or self.wander_timer >= self.wander_duration:
@@ -127,7 +128,6 @@ class Enemy(Character):
             self.next_jump_interval = random.uniform(2.0, 3.0)
 
     def avoid_clumping(self):
-        """Prevent enemies from merging into a group by increasing separation."""
         if not self.parent or not hasattr(self.parent, 'obstacles'):
             return
         for other in self.parent.obstacles:
@@ -147,20 +147,18 @@ class Enemy(Character):
                 other.velocity_x += normalized_dx * 2
 
     def take_damage(self, damage):
-        """Reduce health and die if health <= 0."""
         self.health -= damage
+        self.update_hp_bar()  # Update HP bar when damaged
         if self.health <= 0:
             self.die()
 
     def die(self):
-        """Remove the enemy from the game."""
         if self.parent and self in self.parent.obstacles:
             self.parent.obstacles.remove(self)
             self.parent.remove_widget(self)
             print(f"Enemy at {self.pos} has died.")
 
     def attack(self):
-        """Perform an attack towards the player."""
         from .attack import EnemyProjectile
         if not self.parent or not isinstance(self.parent, Widget):
             return
@@ -170,3 +168,15 @@ class Enemy(Character):
                                     target_pos=(self.target.x + self.target.width / 2, self.target.y + self.target.height / 2))
             game.add_widget(attack)
             game.enemy_attacks.append(attack)
+
+    def update_hp_bar(self):
+        """Draw or update the HP bar above the enemy."""
+        if self.hp_bar_instruction:
+            self.canvas.after.remove(self.hp_bar_instruction)
+        hp_width = (self.health / self.max_health) * self.width  # Scale bar width
+        with self.canvas.after:
+            Color(1, 0, 0, 1)  # Red for enemy
+            self.hp_bar_instruction = Rectangle(
+                pos=(self.x, self.y + self.height + 5),  # 5 pixels above
+                size=(hp_width, 5)  # 5 pixels high
+            )
