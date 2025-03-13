@@ -1,6 +1,3 @@
-from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty, ReferenceListProperty
-
 class Hitbox:
     def __init__(self, offset_x=0, offset_y=0, width=0, height=0):
         self.offset_x = offset_x
@@ -20,7 +17,7 @@ class Hitbox:
 
     @staticmethod
     def collide(rect1, rect2):
-        return (rect1['x'] < rect2['right'] and
-                rect1['right'] > rect2['x'] and
-                rect1['y'] < rect2['top'] and
-                rect1['top'] > rect2['y'])
+        return (rect1['x'] <= rect2['right'] and    # Changed < to <=
+                rect1['right'] >= rect2['x'] and    # Changed > to >=
+                rect1['y'] <= rect2['top'] and      # Changed < to <=
+                rect1['top'] >= rect2['y'])         # Changed > to >=

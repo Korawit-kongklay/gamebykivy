@@ -4,6 +4,7 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 from .dino import Dino
 from .stage import Stage
+from .hitbox import Hitbox
 
 class DinoGame(Widget):
     dino = ObjectProperty(None)
@@ -36,6 +37,7 @@ class DinoGame(Widget):
 
     def bind_inputs(self):
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        print(f"Keyboard bound: {self.keyboard is not None}")
         self.keyboard.bind(on_key_down=self._on_keyboard_down, on_key_up=self._on_keyboard_up)
         Window.bind(mouse_pos=self._on_mouse_pos)
         if self.ENABLE_BULLETS:
@@ -47,9 +49,17 @@ class DinoGame(Widget):
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active or not self.ENABLE_PLAYER or not self.dino:
+            print("Jump blocked - Game not active or no dino")
             return False
-        if keycode[1] == 'spacebar' and (self.dino.y == 0 or self.check_platform_collision(self.dino)):
-            self.dino.velocity_y = 7
+        print(f"Key pressed: {keycode[1]}")
+        if keycode[1] == 'spacebar':
+            on_ground = self.dino.y == 0
+            on_platform = self.is_on_platform(self.dino)
+            can_jump = (on_ground or on_platform) and abs(self.dino.velocity_y) < 0.01
+            print(f"Jump attempt - On ground: {on_ground}, On platform: {on_platform}, Vel_y: {self.dino.velocity_y}, Can jump: {can_jump}")
+            if can_jump:
+                self.dino.velocity_y = 7
+                print("Jumping initiated!")
         elif keycode[1] in ('left', 'a'):
             self.dino.velocity_x = -5
         elif keycode[1] in ('right', 'd'):
@@ -79,8 +89,10 @@ class DinoGame(Widget):
             return
         if self.ENABLE_PLAYER and self.dino:
             self.dino.velocity_y -= 0.15  # Gravity
+            prev_y = self.dino.y
             self.dino.move()
-            self.check_platform_collision(self.dino)  # Check after moving
+            landed = self.check_platform_collision(self.dino)
+            print(f"Update - Pos: ({self.dino.x}, {self.dino.y}), Prev_y: {prev_y}, Vel_y: {self.dino.velocity_y}, Landed: {landed}")
         if self.ENABLE_BULLETS:
             for bullet in self.bullets[:]:
                 bullet.move()
@@ -88,18 +100,37 @@ class DinoGame(Widget):
                     self.remove_widget(bullet)
                     self.bullets.remove(bullet)
 
-    def check_platform_collision(self, character):
+    def is_on_platform(self, character):
+        """Check if the character is on a platform without modifying state."""
+        char_rect = character.get_hitbox_rect()
+        print(f"Char hitbox: x={char_rect['x']}, y={char_rect['y']}, w={char_rect['width']}, h={char_rect['height']}, top={char_rect['top']}")
         for platform in self.stage.platforms:
-            if (character.collide_widget(platform) and 
-                character.velocity_y <= 0 and  # Falling or stationary
-                character.y + character.height > platform.y and  # Character top above platform bottom
-                character.y <= platform.y + platform.height + 5):  # Character bottom near platform top
-                character.y = platform.y + platform.height  # Land on platform
-                character.velocity_y = 0
+            plat_rect = platform.get_hitbox_rect()
+            print(f"Plat hitbox: x={plat_rect['x']}, y={plat_rect['y']}, w={plat_rect['width']}, h={plat_rect['height']}, top={plat_rect['top']}")
+            colliding = Hitbox.collide(char_rect, plat_rect)
+            distance = plat_rect['top'] - char_rect['y']
+            is_on = colliding and character.velocity_y <= 0 and -5 <= distance <= 10
+            print(f"is_on_platform - Colliding: {colliding}, Distance: {distance}, Is on: {is_on}")
+            if is_on:
                 return True
-        if character.y <= 0:  # Ground check
+        return False
+
+    def check_platform_collision(self, character):
+        """Handle collision and position adjustment."""
+        char_rect = character.get_hitbox_rect()
+        for platform in self.stage.platforms:
+            plat_rect = platform.get_hitbox_rect()
+            if Hitbox.collide(char_rect, plat_rect) and character.velocity_y <= 0:
+                character.y = plat_rect['top'] - character.hitbox.offset_y
+                character.velocity_y = 0
+                print(f"Collision - Landed on platform, y set to: {character.y}, Plat top: {plat_rect['top']}")
+                return True
+        
+        # Ground check
+        if character.y <= 0:
             character.y = 0
             character.velocity_y = 0
+            print("Collision - Landed on ground")
             return True
         return False
 
