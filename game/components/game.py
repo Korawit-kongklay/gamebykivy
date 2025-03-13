@@ -38,17 +38,20 @@ class Game(Widget):
         if self.ENABLE_BOSS:
             Clock.schedule_interval(self.spawn_boss_check, 5.0)
         self.music_manager.play_music(self.stage_number)
+        self.walk_sound_playing = False  # To control walk sound looping
 
     def initialize_game(self):
         """Initialize the game state and entities."""
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn enemies immediately
+            self.stage.spawn_obstacles()
+            for enemy in self.stage.obstacles:
+                self.music_manager.play_spawn()  # Play spawn sound for enemies
         if self.ENABLE_PLAYER:
             self.player = Player(pos=(100, 0))
             self.add_widget(self.player)
-            # Set player as target for all enemies
+            self.music_manager.play_spawn()  # Play spawn sound for player
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
@@ -85,15 +88,23 @@ class Game(Widget):
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
                 self.player.velocity_y = 6
+                self.music_manager.play_jump()  # Play jump sound
         elif keycode[1] in ('left', 'a'):
             self.player.velocity_x = -5
+            if not self.walk_sound_playing and self.on_platform:
+                self.music_manager.play_walk()  # Play walk sound
+                self.walk_sound_playing = True
         elif keycode[1] in ('right', 'd'):
             self.player.velocity_x = 5
+            if not self.walk_sound_playing and self.on_platform:
+                self.music_manager.play_walk()  # Play walk sound
+                self.walk_sound_playing = True
         return True
 
     def _on_keyboard_up(self, keyboard, keycode):
         if self.ENABLE_PLAYER and self.player and keycode[1] in ('left', 'a', 'right', 'd'):
             self.player.velocity_x = 0
+            self.walk_sound_playing = False  # Stop walk sound when movement stops
         return True
 
     def _on_mouse_pos(self, window, pos):
@@ -107,6 +118,7 @@ class Game(Widget):
         self.add_widget(attack)
         self.player_attacks.append(attack)
         self.last_attack_time = Clock.get_time()
+        self.music_manager.play_shoot()  # Play shoot sound
 
     def spawn_boss_check(self, dt):
         if not self.ENABLE_BOSS or not self.game_active:
@@ -115,6 +127,7 @@ class Game(Widget):
             self.boss = Boss(pos=(Window.width - 60, 0))
             self.add_widget(self.boss)
             self.boss.velocity_x = -1
+            self.music_manager.play_spawn()  # Play spawn sound for boss
 
     def update(self, dt):
         if not self.game_active:
@@ -147,35 +160,32 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.update_enemies()
 
-        # Check if all enemies are cleared and move to next stage
         if self.ENABLE_ENEMIES and not self.stage.obstacles and not self.boss:
             self.next_stage()
 
         if self.health <= 0:
             self.game_active = False
             print("Game Over!")
-            self.music_manager.fade_out_music(duration=1.0)
+            self.music_manager.play_die()  # Play die sound
+            self.music_manager.fade_out_music(duration=1.0)  # Fade out music
 
     def next_stage(self):
         """Advance to the next stage when all enemies are cleared."""
         self.stage_number += 1
         print(f"Moving to Stage {self.stage_number}")
-        # Clear existing attacks
         for attack in self.player_attacks + self.enemy_attacks:
             self.remove_widget(attack)
         self.player_attacks.clear()
         self.enemy_attacks.clear()
-        # Remove and replace the current stage
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn new enemies
-            # Reassign player as target for new enemies
+            self.stage.spawn_obstacles()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
+                self.music_manager.play_spawn()  # Play spawn sound for new enemies
                 print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        # Reset player position
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
@@ -235,7 +245,6 @@ class Game(Widget):
         return on_platform
 
     def update_attacks(self):
-        # Update player attacks
         for attack in self.player_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
@@ -243,7 +252,6 @@ class Game(Widget):
                 self.player_attacks.remove(attack)
             else:
                 attack_rect = attack.get_hitbox_rect()
-                # Check collision with boss
                 if self.boss and Hitbox.collide(attack_rect, self.boss.get_hitbox_rect()):
                     self.boss.health -= 1
                     self.remove_widget(attack)
@@ -252,20 +260,18 @@ class Game(Widget):
                         self.remove_widget(self.boss)
                         self.boss = None
                         self.score += 50
-                # Check collision with enemies
                 elif self.ENABLE_ENEMIES:
                     for enemy in self.stage.obstacles[:]:
                         enemy_rect = enemy.get_hitbox_rect()
                         if Hitbox.collide(attack_rect, enemy_rect):
-                            enemy.take_damage(100)  # Apply damage to enemy
+                            enemy.take_damage(100)
                             self.remove_widget(attack)
                             self.player_attacks.remove(attack)
                             if enemy.health <= 0:
-                                self.score += 100  # Increase score when enemy dies
+                                self.score += 100
                                 print(f"Enemy killed! Score increased to {self.score}")
                             break
 
-        # Update enemy attacks
         for attack in self.enemy_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
@@ -282,12 +288,10 @@ class Game(Widget):
             self.apply_gravity(enemy)
             enemy.move()
             self.handle_platform_collision(enemy)
-            # Collision with player
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.health -= 1
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
-            # Remove enemies that go off-screen
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
@@ -308,12 +312,14 @@ class Game(Widget):
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
-            self.stage.spawn_obstacles()  # Spawn enemies immediately on restart
+            self.stage.spawn_obstacles()
+            for enemy in self.stage.obstacles:
+                self.music_manager.play_spawn()  # Play spawn sound for enemies
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0))
             self.add_widget(self.player)
-            # Reassign player as target for new enemies
+            self.music_manager.play_spawn()  # Play spawn sound for player
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
