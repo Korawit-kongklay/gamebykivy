@@ -16,8 +16,9 @@ class Enemy(Character):
     move_speed = NumericProperty(3.0)  # Speed for movement
     vision_range = NumericProperty(200)  # Distance to detect player
     facing_right = BooleanProperty(True)  # Direction enemy is facing
+    health = NumericProperty(100)  # Health points for the enemy
 
-    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (50, 50), **kwargs):
+    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (80, 80), **kwargs):
         super().__init__(gif_path=gif_path, size=size, **kwargs)
         self.last_attack_time = 0
         self.wander_target = None
@@ -80,7 +81,8 @@ class Enemy(Character):
 
         print(f"Enemy Pos: ({self.x:.2f}, {self.y:.2f}), Vel: ({self.velocity_x:.2f}, {self.velocity_y:.2f}), "
               f"Target Pos: ({self.target.x:.2f}, {self.target.y:.2f}), dx: {dx:.2f}, Distance: {distance:.2f}, "
-              f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}")
+              f"Facing Right: {self.facing_right}, In Vision: {player_in_vision}, Wander Target: {self.wander_target}, "
+              f"Health: {self.health}")
 
     def chase_player(self, dx, dy, distance):
         """Chase the player when in vision."""
@@ -134,18 +136,28 @@ class Enemy(Character):
             dx = other.x - self.x
             dy = other.y - self.y
             distance = Vector(dx, dy).length() or 0.001
-            # Increase separation distance to 3x width and apply stronger repulsion
             if distance < self.width * 3:
                 normalized_dx = dx / distance
                 normalized_dy = dy / distance
-                # Stronger push away in both x and y directions
-                self.velocity_x -= normalized_dx * 2  # Increased from 1 to 2
-                if abs(dy) < self.height * 2 and abs(self.velocity_y) < 0.01:  # Jump if vertically close
+                self.velocity_x -= normalized_dx * 2
+                if abs(dy) < self.height * 2 and abs(self.velocity_y) < 0.01:
                     self.velocity_y = 5
                     self.last_jump_time = Clock.get_time()
                     self.next_jump_interval = random.uniform(2.0, 3.0)
-                # Apply opposite force to the other enemy for mutual repulsion
                 other.velocity_x += normalized_dx * 2
+
+    def take_damage(self, damage):
+        """Reduce health and die if health <= 0."""
+        self.health -= damage
+        if self.health <= 0:
+            self.die()
+
+    def die(self):
+        """Remove the enemy from the game."""
+        if self.parent and self in self.parent.obstacles:
+            self.parent.obstacles.remove(self)
+            self.parent.remove_widget(self)
+            print(f"Enemy at {self.pos} has died.")
 
     def attack(self):
         """Perform an attack towards the player."""

@@ -7,6 +7,7 @@ from .stage import Stage
 from .hitbox import Hitbox
 from .boss import Boss
 from .enemy import Enemy
+from .attack import ProjectileAttack  # Ensure this is imported for attack handling
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -96,7 +97,6 @@ class Game(Widget):
         self.mouse_pos = pos
 
     def _on_mouse_down(self, window, x, y, button, modifiers):
-        from .attack import ProjectileAttack
         if button != 'left' or not self.game_active or (Clock.get_time() - self.last_attack_time < self.attack_cooldown):
             return
         start_pos = (self.player.x + self.player.width, self.player.y + self.player.height / 2)
@@ -116,7 +116,6 @@ class Game(Widget):
     def update(self, dt):
         if not self.game_active:
             return
-        self.score += dt
 
         if self.ENABLE_PLAYER and self.player:
             self.apply_gravity(self.player)
@@ -143,7 +142,7 @@ class Game(Widget):
             self.update_attacks()
 
         if self.ENABLE_ENEMIES:
-            self.check_enemy_collisions()
+            self.update_enemies()
 
         if self.health <= 0:
             self.game_active = False
@@ -202,20 +201,37 @@ class Game(Widget):
         return on_platform
 
     def update_attacks(self):
+        # Update player attacks
         for attack in self.player_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 self.remove_widget(attack)
                 self.player_attacks.remove(attack)
-            elif self.boss and Hitbox.collide(attack.get_hitbox_rect(), self.boss.get_hitbox_rect()):
-                self.boss.health -= 1
-                self.remove_widget(attack)
-                self.player_attacks.remove(attack)
-                if self.boss.health <= 0:
-                    self.remove_widget(self.boss)
-                    self.boss = None
-                    self.score += 50
+            else:
+                attack_rect = attack.get_hitbox_rect()
+                # Check collision with boss
+                if self.boss and Hitbox.collide(attack_rect, self.boss.get_hitbox_rect()):
+                    self.boss.health -= 1
+                    self.remove_widget(attack)
+                    self.player_attacks.remove(attack)
+                    if self.boss.health <= 0:
+                        self.remove_widget(self.boss)
+                        self.boss = None
+                        self.score += 50
+                # Check collision with enemies
+                elif self.ENABLE_ENEMIES:
+                    for enemy in self.stage.obstacles[:]:
+                        enemy_rect = enemy.get_hitbox_rect()
+                        if Hitbox.collide(attack_rect, enemy_rect):
+                            enemy.take_damage(100)  # Apply damage to enemy
+                            self.remove_widget(attack)
+                            self.player_attacks.remove(attack)
+                            if enemy.health <= 0:
+                                self.score += 100  # Increase score when enemy dies
+                                print(f"Enemy killed! Score increased to {self.score}")
+                            break
 
+        # Update enemy attacks
         for attack in self.enemy_attacks[:]:
             attack.move()
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
@@ -226,18 +242,23 @@ class Game(Widget):
                 self.remove_widget(attack)
                 self.enemy_attacks.remove(attack)
 
-    def check_enemy_collisions(self):
+    def update_enemies(self):
+        """Update all enemies and handle collisions."""
         for enemy in self.stage.obstacles[:]:
             self.apply_gravity(enemy)
             enemy.move()
             self.handle_platform_collision(enemy)
+            # Collision with player
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.health -= 1
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
+            # Remove enemies that go off-screen
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
+            if self.debug_hitbox:
+                enemy.update_hitbox_debug()
 
     def restart(self):
         self.game_active = True
