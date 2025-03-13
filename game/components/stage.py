@@ -1,5 +1,5 @@
 from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty, ListProperty  # Add ListProperty
+from kivy.properties import NumericProperty, ListProperty
 from kivy.clock import Clock
 import random
 from .platform import Platform
@@ -9,7 +9,7 @@ from kivy.core.window import Window
 class Stage(Widget):
     stage_number = NumericProperty(1)
     obstacles = []
-    platforms = ListProperty([])  # Changed to ListProperty for binding
+    platforms = ListProperty([])
 
     def __init__(self, stage_number=1, spawn_obstacles=False, **kwargs):
         super().__init__(**kwargs)

@@ -1,4 +1,4 @@
-from .character import Character
+from .player import Character
 
 class Dino(Character):
     def __init__(self, **kwargs):

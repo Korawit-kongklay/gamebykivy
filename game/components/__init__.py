@@ -1,5 +1,5 @@
-from .bullet import BaseBullet, PlayerBullet, BossBullet
-from .character import Character
+from .attack import Attack, ProjectileAttack, EnemyProjectile
+from .player import Character
 from .dino import Dino
 from .enemy import Enemy
 from .obstacle import Obstacle

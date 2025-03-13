@@ -1,5 +1,4 @@
 from .enemy import Enemy
-from .bullet import BossBullet
 from kivy.properties import NumericProperty
 
 class Boss(Enemy):
@@ -9,6 +8,7 @@ class Boss(Enemy):
         super().__init__(gif_path='assets/gifs/jacko.gif', size=(60, 80), velocity_x=-1, **kwargs)
 
     def shoot(self, game):
-        bullet = BossBullet(start_pos=(self.x - 15, self.y + self.height / 2))
-        game.add_widget(bullet)
-        game.boss_bullets.append(bullet)
+        from .attack import EnemyProjectile
+        attack = EnemyProjectile(start_pos=(self.x - 15, self.y + self.height / 2))
+        game.add_widget(attack)
+        game.enemy_attacks.append(attack)

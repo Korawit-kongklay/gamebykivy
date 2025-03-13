@@ -2,7 +2,7 @@ from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, ReferenceListProperty
 from kivy.vector import Vector
 from kivy.core.window import Window
-from .character import Character
+from .player import Character
 
 class Enemy(Character):
     velocity_x = NumericProperty(-3)

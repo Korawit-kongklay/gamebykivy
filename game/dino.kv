@@ -14,11 +14,11 @@
             size: self.size
             texture: self.texture
 
-<Bullet>:
+<Attack>:
     canvas:
         PushMatrix
         Rotate:
-            angle: self.bullet_rotation
+            angle: self.attack_rotation
             origin: self.center
         Color:
             rgba: 1, 1, 0, 1
@@ -27,7 +27,7 @@
             size: self.size
         PopMatrix
 
-<DinoGame>:
+<Game>:
     size: root.size
     canvas.before:
         Rectangle:
@@ -35,7 +35,7 @@
             size: self.size
             source: 'assets/gifs/darkforest.gif'
     Label:
-        text: f'Stage: {root.stage_number} Score: {root.score}'
+        text: f'Stage: {root.stage_number} Score: {root.score:.1f} Health: {root.health}'
         font_size: 20
         top: root.top - 10
         right: root.right - 10

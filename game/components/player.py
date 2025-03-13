@@ -4,7 +4,7 @@ from kivy.vector import Vector
 from kivy.clock import Clock
 from kivy.core.window import Window
 from .gif_loader import GifLoader
-from .hitbox import Hitbox  # Add this import
+from .hitbox import Hitbox
 
 class Character(Widget):
     velocity_x = NumericProperty(0)
@@ -12,18 +12,12 @@ class Character(Widget):
     velocity = ReferenceListProperty(velocity_x, velocity_y)
     texture = ObjectProperty(None)
     facing_right = BooleanProperty(True)
-    hitbox = ObjectProperty(None)  # Add hitbox property
+    hitbox = ObjectProperty(None)
 
     def __init__(self, gif_path: str, size: tuple = (80, 80), **kwargs):
         super().__init__(**kwargs)
         self.size = size
-        # Initialize hitbox (adjust these values based on your sprite's actual hittable area)
-        self.hitbox = Hitbox(
-            offset_x=10,  # Example offset from left
-            offset_y=0,   # Example offset from bottom
-            width=size[0]-20,  # Example width (smaller than sprite)
-            height=size[1]     # Example height
-        )
+        self.hitbox = Hitbox(offset_x=10, offset_y=0, width=size[0]-20, height=size[1])
         try:
             self.load_animations(gif_path)
             Clock.schedule_interval(self.update_frame, 0.1)
@@ -55,6 +49,6 @@ class Character(Widget):
     def get_hitbox_rect(self):
         return self.hitbox.get_rect(self.x, self.y)
 
-class Dino(Character):
+class Player(Character):
     def __init__(self, **kwargs):
         super().__init__(gif_path='assets/gifs/ufopug.gif', **kwargs)
