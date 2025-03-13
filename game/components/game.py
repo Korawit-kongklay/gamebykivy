@@ -92,15 +92,15 @@ class Game(Widget):
             self.stage.obstacles.append(enemy)
 
     def spawn_portal(self):
-        """Spawn or reposition the portal at the last enemy death position."""
-        if self.portal:
-            self.remove_widget(self.portal)
-        # Use the last enemy's death position, adjusted to keep within bounds
-        portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 50))  # 50 is portal width
-        portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 50))  # 50 is portal height
-        self.portal = Portal(pos=(portal_x, portal_y))
-        self.add_widget(self.portal)
-        print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
+            """Spawn or reposition the portal at the last enemy death position, facing the player at spawn time."""
+            if self.portal:
+                self.remove_widget(self.portal)
+            # Use the last enemy's death position, adjusted to keep within bounds
+            portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 80))  # 80 is portal width
+            portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 240))  # 240 is portal height
+            self.portal = Portal(pos=(portal_x, portal_y), player=self.player)  # Pass player reference for initial facing
+            self.add_widget(self.portal)
+            print(f"Portal spawned at {self.portal.pos} (last enemy death position), facing player at spawn")
 
     def _update_hp_position(self, instance, value):
         """Update heart positions when hp_layout moves."""
