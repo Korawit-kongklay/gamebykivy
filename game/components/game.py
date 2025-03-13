@@ -13,6 +13,7 @@ from .enemy import Enemy
 from .attack import ProjectileAttack
 from .portal import Portal
 import random  # For random positioning
+from components.music_manager import MusicManager
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -28,7 +29,7 @@ class Game(Widget):
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
     debug_hitbox = BooleanProperty(False)
-    last_enemy_death_pos = ListProperty([0, 0])  # New property to track last enemy death position
+    last_enemy_death_pos = ListProperty([0, 0])  # Track last enemy death position
 
     ENABLE_PLAYER = True
     ENABLE_ENEMIES = True
@@ -40,13 +41,14 @@ class Game(Widget):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
         self.hp_layout = None  # Will hold the BoxLayout for hearts
+        self.music_manager = MusicManager()
+        self.walk_sound_playing = False  # To control walk sound looping
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
-            Clock.schedule_interval(self.spawn_boss_check, 5)
-        # Schedule an initial update after the widget is added to the window
-        Clock.schedule_once(self._initial_update, 0)
+            Clock.schedule_interval(self.spawn_boss_check, 5.0)
+        self.music_manager.play_music(self.stage_number)
 
     def _initial_update(self, dt):
         """Ensure hearts are drawn at the correct position after initialization."""
@@ -58,14 +60,18 @@ class Game(Widget):
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
+            for enemy in self.stage.obstacles:
+                self.music_manager.play_spawn()  # Play spawn sound for enemies
         if self.ENABLE_PLAYER:
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
             self.player_health = self.player.health
             self.player_max_health = self.player.max_health
             self.add_widget(self.player)
             self.player.bind(health=self.on_player_health_changed)
+            self.music_manager.play_spawn()  # Play spawn sound for player
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
+                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
@@ -73,7 +79,7 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
-        self.last_enemy_death_pos = [Window.width - 60, 10]  # Default position if no enemies die yet
+        self.last_enemy_death_pos = [Window.width - 60, 10]  # Default position
         # Initialize hp_layout
         self.hp_layout = self.ids.hp_layout  # Access BoxLayout via id
         self.hp_layout.bind(pos=self._update_hp_position)  # Bind pos to update hearts
@@ -92,21 +98,21 @@ class Game(Widget):
             self.stage.obstacles.append(enemy)
 
     def spawn_portal(self):
-            """Spawn or reposition the portal at the last enemy death position, facing the player at spawn time."""
-            if self.portal:
-                self.remove_widget(self.portal)
-            # Use the last enemy's death position, adjusted to keep within bounds
-            portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 80))  # 80 is portal width
-            portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 240))  # 240 is portal height
-            self.portal = Portal(pos=(portal_x, portal_y), player=self.player)  # Pass player reference for initial facing
-            self.add_widget(self.portal)
-            print(f"Portal spawned at {self.portal.pos} (last enemy death position), facing player at spawn")
+        """Spawn or reposition the portal at the last enemy death position."""
+        if self.portal:
+            self.remove_widget(self.portal)
+        portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 80))
+        portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 240))
+        self.portal = Portal(pos=(portal_x, portal_y), player=self.player)
+        self.add_widget(self.portal)
+        print(f"Portal spawned at {self.portal.pos} (last enemy death position), facing player at spawn")
 
     def _update_hp_position(self, instance, value):
         """Update heart positions when hp_layout moves."""
         self.update_hp_hearts()
 
     def bind_inputs(self):
+        """Bind keyboard and mouse inputs for player control."""
         self.keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self.keyboard.bind(on_key_down=self._on_keyboard_down, on_key_up=self._on_keyboard_up)
         Window.bind(mouse_pos=self._on_mouse_pos)
@@ -120,6 +126,10 @@ class Game(Widget):
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if not self.game_active:
             return False
+        if keycode[1] == 'escape':  # Pause game with ESC
+            self.game_active = False
+            self.show_pause_menu()
+            return True
         if keycode[1] == 'h':
             self.debug_hitbox = not self.debug_hitbox
             self.update_hitbox_visibility()
@@ -129,15 +139,23 @@ class Game(Widget):
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
                 self.player.velocity_y = 6
+                self.music_manager.play_jump()  # Play jump sound
         elif keycode[1] in ('left', 'a'):
             self.player.velocity_x = -5
+            if not self.walk_sound_playing and self.on_platform:
+                self.music_manager.play_walk()  # Play walk sound
+                self.walk_sound_playing = True
         elif keycode[1] in ('right', 'd'):
             self.player.velocity_x = 5
+            if not self.walk_sound_playing and self.on_platform:
+                self.music_manager.play_walk()  # Play walk sound
+                self.walk_sound_playing = True
         return True
 
     def _on_keyboard_up(self, keyboard, keycode):
         if self.ENABLE_PLAYER and self.player and keycode[1] in ('left', 'a', 'right', 'd'):
             self.player.velocity_x = 0
+            self.walk_sound_playing = False  # Stop walk sound
         return True
 
     def _on_mouse_pos(self, window, pos):
@@ -151,6 +169,7 @@ class Game(Widget):
         self.add_widget(attack)
         self.player_attacks.append(attack)
         self.last_attack_time = Clock.get_time()
+        self.music_manager.play_shoot()  # Play shoot sound
 
     def spawn_boss_check(self, dt):
         if not self.ENABLE_BOSS or not self.game_active:
@@ -159,6 +178,7 @@ class Game(Widget):
             self.boss = Boss(pos=(Window.width - 60, 0))
             self.add_widget(self.boss)
             self.boss.velocity_x = -1
+            self.music_manager.play_spawn()  # Play spawn sound for boss
 
     def on_player_health_changed(self, instance, value):
         """Callback to update UI when player health changes."""
@@ -193,6 +213,7 @@ class Game(Widget):
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
             self.player_health = self.player.health
+            print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}")
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
 
@@ -233,6 +254,8 @@ class Game(Widget):
         if self.player_health <= 0:
             self.game_active = False
             print("Game Over!")
+            self.music_manager.play_die()  # Play die sound
+            self.music_manager.fade_out_music(duration=1.0)  # Fade out music
 
     def next_stage(self):
         """Advance to the next stage."""
@@ -254,14 +277,14 @@ class Game(Widget):
             self.spawn_initial_enemies()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-            self.stage.spawn_obstacles()
-            for enemy in self.stage.obstacles:
-                enemy.target = self.player
+                self.music_manager.play_spawn()  # Play spawn sound for new enemies
+                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
             self.player.velocity_y = 0
         self.update_hp_hearts()
+        self.music_manager.play_music(self.stage_number)
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -340,7 +363,7 @@ class Game(Widget):
                             self.player_attacks.remove(attack)
                             if enemy.health <= 0:
                                 self.score += 100
-                                self.last_enemy_death_pos = [enemy.x, enemy.y]  # Update death position
+                                self.last_enemy_death_pos = [enemy.x, enemy.y]
                                 print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
                             break
 
@@ -361,7 +384,7 @@ class Game(Widget):
             self.handle_platform_collision(enemy)
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.player.take_damage(1)
-                self.last_enemy_death_pos = [enemy.x, enemy.y]  # Update death position on collision
+                self.last_enemy_death_pos = [enemy.x, enemy.y]
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
                 print(f"Enemy collision death at {self.last_enemy_death_pos}")
@@ -390,6 +413,9 @@ class Game(Widget):
         self.add_widget(self.stage)
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
+            for enemy in self.stage.obstacles:
+                enemy.target = self.player
+                self.music_manager.play_spawn()  # Play spawn sound for enemies
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             self.player = Player(pos=(100, 0), health=self.initial_player_hp)
@@ -402,3 +428,12 @@ class Game(Widget):
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.last_enemy_death_pos = [Window.width - 60, 10]  # Reset to default
         self.update_hp_hearts()
+        self.music_manager.play_music(self.stage_number)
+
+    def show_pause_menu(self):
+        """Show the pause menu."""
+        from .pause_menu import PauseMenu
+        app = App.get_running_app()
+        app.root.clear_widgets()
+        pause_menu = PauseMenu(self)  # Pass Game instance to PauseMenu
+        app.root.add_widget(pause_menu)
