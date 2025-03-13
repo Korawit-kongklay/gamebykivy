@@ -15,20 +15,17 @@ class MainMenu(BoxLayout):
         self.orientation = 'vertical'
         self.spacing = 20
         self.music_manager = MusicManager()
-        self.menu_music_volume = 1.0  # เก็บค่า volume สำหรับ background music
-        self.effects_volume = 1.0     # เก็บค่า volume สำหรับ sound effects
+        self.menu_music_volume = 1.0
+        self.effects_volume = 1.0
         
-        # เริ่มเล่นเพลงเมนู
         self.music_manager.play_menu_music()
         
-        # Title
         self.add_widget(Label(
             text='DinoCon',
             font_size=48,
             size_hint=(1, 0.4)
         ))
         
-        # Start Button
         self.start_button = Button(
             text='Start Game',
             size_hint=(0.5, 0.2),
@@ -38,7 +35,6 @@ class MainMenu(BoxLayout):
         self.start_button.bind(on_press=self.start_game)
         self.add_widget(self.start_button)
         
-        # Settings Button
         self.settings_button = Button(
             text='Settings',
             size_hint=(0.5, 0.2),
@@ -48,7 +44,6 @@ class MainMenu(BoxLayout):
         self.settings_button.bind(on_press=self.show_settings)
         self.add_widget(self.settings_button)
         
-        # Exit Button
         self.exit_button = Button(
             text='Exit',
             size_hint=(0.5, 0.2),
@@ -59,21 +54,17 @@ class MainMenu(BoxLayout):
         self.add_widget(self.exit_button)
 
     def start_game(self, instance):
-        """Switch to the game screen and pass music and effects volumes."""
-        self.music_manager.stop_music()  # หยุดเพลงเมนู
+        self.music_manager.stop_music()
         app = App.get_running_app()
         app.root.clear_widgets()
         game = Game()
-        # ส่งต่อค่า volume ทั้ง background และ effects
         game.music_manager.current_music.volume = self.menu_music_volume
         game.music_manager.set_effects_volume(self.effects_volume)
         app.root.add_widget(game)
 
     def show_settings(self, instance):
-        """Show settings popup with volume controls."""
         settings_content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
-        # Background Music Volume Slider
         music_label = Label(text='Background Music Volume')
         settings_content.add_widget(music_label)
         
@@ -86,7 +77,6 @@ class MainMenu(BoxLayout):
         music_slider.bind(value=self.on_music_volume_change)
         settings_content.add_widget(music_slider)
         
-        # Sound Effects Volume Slider
         effects_label = Label(text='Sound Effects Volume')
         settings_content.add_widget(effects_label)
         
@@ -99,7 +89,14 @@ class MainMenu(BoxLayout):
         effects_slider.bind(value=self.on_effects_volume_change)
         settings_content.add_widget(effects_slider)
         
-        # Close Button
+        # Add resize button for testing
+        resize_button = Button(
+            text='Resize Window (800x600)',
+            size_hint=(1, 0.3)
+        )
+        resize_button.bind(on_press=self.resize_window)
+        settings_content.add_widget(resize_button)
+        
         close_button = Button(
             text='Close',
             size_hint=(1, 0.3)
@@ -116,18 +113,19 @@ class MainMenu(BoxLayout):
         popup.open()
 
     def on_music_volume_change(self, instance, value):
-        """Adjust background music volume and store it."""
         if self.music_manager.current_music:
             self.music_manager.current_music.volume = value
         self.menu_music_volume = value
 
     def on_effects_volume_change(self, instance, value):
-        """Adjust sound effects volume and store it."""
         self.effects_volume = value
         self.music_manager.set_effects_volume(value)
 
+    def resize_window(self, instance):
+        """Test resizing the window."""
+        Window.size = (800, 600)  # Example size, adjust as needed
+
     def exit_game(self, instance):
-        """Exit the application."""
         self.music_manager.stop_music()
         App.get_running_app().stop()
 

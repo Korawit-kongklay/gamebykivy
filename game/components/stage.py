@@ -19,48 +19,67 @@ class Stage(Widget):
         self.spawn_obstacles_enabled = spawn_obstacles
         self.spawn_platforms()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
+        # Bind to window size changes
+        Window.bind(on_resize=self.on_window_resize)
 
     def spawn_platforms(self):
-        """Spawn platforms with a fixed configuration for all stages."""
+        """Spawn platforms with positions and sizes relative to window dimensions."""
+        # Base window size for original coordinates (assumed 1280x720 from main_menu.py)
+        base_width = 1280
+        base_height = 720
+
+        # Original fixed configuration
         platform_config = [
-            # Using Stage 1's configuration for all stages (~21 platforms)
-            (200, 100),
-            (293, 100),  
-            (400, 150),  
-            (600, 100),
-            (693, 76),  
-            (300, 250),
-            (393, 274),  
-            (486, 298),
-            (765, 298),
-            (858, 274),  
-            (700, 500),
-            (607, 500),
-            (514, 500),
-            (421, 500),   
-            (0, 400),
-            (93, 400),
-            (186, 424),
-            (1187, 576),
-            (1187, 176),
-            (1094, 152),
-            (1001, 128),
-            (1094, 552),
-            (1001, 528),
-            (908, 528),
+            (200, 246),
+            (754, 554),
+            (700, 424),
+            (461, 614),
+            (812, 649),
+            (245, 424),
+            (374, 187),
+            (844, 68),
+            (835, 424),
+            (1029, 343),
+            (521, 89),
+            (1111, 442),
+            (420, 259),
+            (294, 598),
+            (681, 349),
+            (640, 160),
+            (35, 275),
+            (438, 426),
+            (80, 387),
+            (997, 115),
         ]
 
         self.platforms.clear()
-        for x, y in platform_config:
-            platform = Platform(pos=(x, y), size=(93, 24))
+        # Calculate scaling factors based on current window size
+        width_scale = Window.width / base_width
+        height_scale = Window.height / base_height
+        # Base platform size (93, 24) scaled dynamically
+        platform_width = 93 * width_scale
+        platform_height = 24 * height_scale
+
+        for base_x, base_y in platform_config:
+            # Scale positions
+            x = base_x * width_scale
+            y = base_y * height_scale
+            # Ensure platforms stay within bounds
+            x = min(max(x, 0), Window.width - platform_width)
+            y = min(max(y, 0), Window.height - platform_height)
+            platform = Platform(pos=(x, y), size=(platform_width, platform_height))
             self.add_widget(platform)
             self.platforms.append(platform)
+
+    def on_window_resize(self, window, width, height):
+        """Update platform positions and sizes when window is resized."""
+        self.spawn_platforms()  # Respawn platforms with new scaling
 
     def spawn_obstacles(self, dt=None):
         """Spawn one enemy with minimum separation."""
         if not self.spawn_obstacles_enabled:
             return
-        min_separation = 150
+        min_separation = 150 * (Window.width / 1280)  # Scale separation dynamically
         attempts = 0
         max_attempts = 10
         while attempts < max_attempts:
