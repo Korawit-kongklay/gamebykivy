@@ -27,7 +27,12 @@ class Stage(Widget):
         }.get(self.stage_number, [
             (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
             (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24))
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
         ])
 
         self.platforms.clear()

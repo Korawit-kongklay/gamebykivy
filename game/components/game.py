@@ -7,7 +7,7 @@ from .stage import Stage
 from .hitbox import Hitbox
 from .boss import Boss
 from .enemy import Enemy
-from .attack import ProjectileAttack  # Ensure this is imported for attack handling
+from .attack import ProjectileAttack
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -144,9 +144,38 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.update_enemies()
 
+        # Check if all enemies are cleared and move to next stage
+        if self.ENABLE_ENEMIES and not self.stage.obstacles and not self.boss:
+            self.next_stage()
+
         if self.health <= 0:
             self.game_active = False
             print("Game Over!")
+
+    def next_stage(self):
+        """Advance to the next stage when all enemies are cleared."""
+        self.stage_number += 1
+        print(f"Moving to Stage {self.stage_number}")
+        # Clear existing attacks
+        for attack in self.player_attacks + self.enemy_attacks:
+            self.remove_widget(attack)
+        self.player_attacks.clear()
+        self.enemy_attacks.clear()
+        # Remove and replace the current stage
+        self.remove_widget(self.stage)
+        self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
+        self.add_widget(self.stage)
+        if self.ENABLE_ENEMIES:
+            self.stage.spawn_obstacles()  # Spawn new enemies
+            # Reassign player as target for new enemies
+            for enemy in self.stage.obstacles:
+                enemy.target = self.player
+                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+        # Reset player position
+        if self.ENABLE_PLAYER:
+            self.player.pos = (100, 0)
+            self.player.velocity_x = 0
+            self.player.velocity_y = 0
 
     def update_hitbox_visibility(self):
         if self.player:
