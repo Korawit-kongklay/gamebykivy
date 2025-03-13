@@ -5,7 +5,6 @@ from kivy.graphics import Color, Rectangle, PushMatrix, PopMatrix, Rotate
 from kivy.graphics.texture import Texture
 from PIL import Image
 import os
-import math  # For angle calculation at spawn time
 from .gif_loader import GifLoader
 from .hitbox import Hitbox
 
@@ -24,12 +23,15 @@ class Portal(Widget):
         self.hitbox = Hitbox(offset_x=0, offset_y=0, width=80, height=240)  # Matches size
         self.rect_instruction = None
         self.rot = None
-        # Calculate initial rotation to face player if provided
+        # Determine initial rotation based on player's horizontal position
         self.initial_angle = 0
         if player:
-            dx = player.center_x - (pos[0] + size[0] / 2)  # Center of portal
-            dy = player.center_y - (pos[1] + size[1] / 2)
-            self.initial_angle = math.degrees(math.atan2(dy, dx))  # Side faces player
+            player_center_x = player.center_x
+            portal_center_x = pos[0] + size[0] / 2  # Center of portal
+            if player_center_x < portal_center_x:
+                self.initial_angle = 180  # Face left
+            else:
+                self.initial_angle = 0    # Face right
         self.load_animations(gif_path)
         if self.textures:
             self.animation_event = Clock.schedule_interval(self.update_frame, self.frame_duration)
@@ -70,7 +72,7 @@ class Portal(Widget):
 
         with self.canvas:
             PushMatrix()
-            # Use the static initial angle calculated at spawn
+            # Use the static initial angle (0 or 180)
             self.rot = Rotate(angle=self.initial_angle, origin=(self.center_x, self.center_y))
             self.rect_instruction = Rectangle(pos=self.pos, size=self.size, texture=self.texture)
             PopMatrix()
