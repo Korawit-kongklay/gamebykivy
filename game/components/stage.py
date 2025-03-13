@@ -21,26 +21,62 @@ class Stage(Widget):
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
     def spawn_platforms(self):
+        """Spawn platforms with predefined positions for each stage."""
         platform_configs = {
-            1: [(200, 200), (293, 150), (386, 150), (479, 100), (450, 250), (543, 250), (100, 350), (193, 350), (286, 350)],
-            2: [(150, 100), (400, 200), (300, 350), (600, 300)]
-        }.get(self.stage_number, [
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
-            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24)),
+            1: [  # Stage 1: Simple layout with a few platforms
+                (200, 200),  # Middle-left platform
+                (400, 250),  # Middle-right platform
+                (600, 200),  # Far-right platform
+                (300, 350),  # Upper-middle platform
+            ],
+            2: [  # Stage 2: More platforms, some vertical progression
+                (150, 100),  # Lower-left
+                (300, 200),  # Middle step
+                (450, 300),  # Higher step
+                (600, 200),  # Right-middle
+                (200, 400),  # Upper-left
+            ],
+            3: [  # Stage 3: Zig-zag pattern
+                (100, 150),  # Bottom-left
+                (250, 250),  # Middle step up
+                (400, 200),  # Middle step down
+                (550, 300),  # Right step up
+                (700, 250),  # Far-right step down
+                (300, 400),  # Upper-middle
+            ],
+            4: [  # Stage 4: Complex layout with gaps
+                (50, 100),   # Bottom-left
+                (200, 150),  # Left step
+                (350, 300),  # Middle-high
+                (500, 200),  # Middle-right
+                (650, 350),  # Right-high
+                (150, 450),  # Upper-left
+                (450, 500),  # Upper-middle
+            ],
+            5: [  # Stage 5: Challenging layout with spread platforms
+                (50, 200),   # Left-middle
+                (200, 300),  # Left-high step
+                (350, 150),  # Middle-low
+                (500, 350),  # Middle-high
+                (650, 250),  # Right-middle
+                (100, 500),  # Upper-left
+                (300, 450),  # Upper-middle
+                (600, 400),  # Upper-right
+            ]
+        }
+    
+        # Use predefined config for the current stage, fallback to random if stage > 5
+        config = platform_configs.get(self.stage_number, [
+            (random.randint(0, Window.width - 93), random.randint(0, Window.height - 24))
+            for _ in range(8)  # Default to 8 random platforms if beyond stage 5
         ])
-
+    
         self.platforms.clear()
-        for x, y in platform_configs:
+        for x, y in config:
             platform = Platform(pos=(x, y), size=(93, 24))
             self.add_widget(platform)
             self.platforms.append(platform)
-
+    
     def spawn_obstacles(self, dt=None):
         """Spawn one enemy with minimum separation."""
         if not self.spawn_obstacles_enabled:

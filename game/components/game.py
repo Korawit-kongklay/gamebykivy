@@ -16,7 +16,7 @@ import random  # For random positioning
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
-    portal = ObjectProperty(None, allownone=True)  # ประกาศครั้งเดียว
+    portal = ObjectProperty(None, allownone=True)
     player = ObjectProperty(None)
     stage = ObjectProperty(None)
     boss = ObjectProperty(None)
@@ -28,6 +28,7 @@ class Game(Widget):
     player_attacks = ListProperty([])
     enemy_attacks = ListProperty([])
     debug_hitbox = BooleanProperty(False)
+    last_enemy_death_pos = ListProperty([0, 0])  # New property to track last enemy death position
 
     ENABLE_PLAYER = True
     ENABLE_ENEMIES = True
@@ -65,7 +66,6 @@ class Game(Widget):
             self.player.bind(health=self.on_player_health_changed)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                # print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.boss_attack_cooldown = 2.0
@@ -73,7 +73,7 @@ class Game(Widget):
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
-        # ไม่เรียก self.spawn_portal() ที่นี่
+        self.last_enemy_death_pos = [Window.width - 60, 10]  # Default position if no enemies die yet
         # Initialize hp_layout
         self.hp_layout = self.ids.hp_layout  # Access BoxLayout via id
         self.hp_layout.bind(pos=self._update_hp_position)  # Bind pos to update hearts
@@ -83,9 +83,8 @@ class Game(Widget):
         """Spawn initial enemies at random positions based on stage number."""
         enemy_count = 5 + (self.stage_number - 1)  # Stage 1: 5, Stage 2: 6, etc.
         self.stage.obstacles.clear()  # Clear existing obstacles
-        enemy_size = (80, 80)  # Assuming Enemy size from your previous code; adjust if different
+        enemy_size = (80, 80)
         for _ in range(enemy_count):
-            # Random x and y within window bounds, accounting for enemy size
             spawn_x = random.uniform(0, Window.width - enemy_size[0])
             spawn_y = random.uniform(0, Window.height - enemy_size[1])
             enemy = Enemy(pos=(spawn_x, spawn_y))
@@ -93,14 +92,15 @@ class Game(Widget):
             self.stage.obstacles.append(enemy)
 
     def spawn_portal(self):
-        """Spawn or reposition the portal."""
+        """Spawn or reposition the portal at the last enemy death position."""
         if self.portal:
             self.remove_widget(self.portal)
-        portal_x = Window.width - 60
-        portal_y = 10
+        # Use the last enemy's death position, adjusted to keep within bounds
+        portal_x = max(0, min(self.last_enemy_death_pos[0], Window.width - 50))  # 50 is portal width
+        portal_y = max(0, min(self.last_enemy_death_pos[1], Window.height - 50))  # 50 is portal height
         self.portal = Portal(pos=(portal_x, portal_y))
         self.add_widget(self.portal)
-        print(f"Portal spawned at {self.portal.pos}")
+        print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
 
     def _update_hp_position(self, instance, value):
         """Update heart positions when hp_layout moves."""
@@ -163,49 +163,25 @@ class Game(Widget):
     def on_player_health_changed(self, instance, value):
         """Callback to update UI when player health changes."""
         self.player_health = value
-        self.update_hp_hearts()  # Update heart display
+        self.update_hp_hearts()
 
     def update_hp_hearts(self):
         """Update the heart display using Image widgets in the hp_layout."""
         if not self.hp_layout:
             return
-
-        # Clear previous heart widgets
         self.hp_layout.clear_widgets()
-
-        max_hearts = int(self.player_max_health / 2)  # Total heart slots (10 for 20 HP)
-        full_hearts = int(self.player_health / 2)  # Number of full hearts (2 HP each)
-        half_heart = self.player_health % 2 == 1  # True if there’s 1 HP left
-
-        # Add full hearts
+        max_hearts = int(self.player_max_health / 2)
+        full_hearts = int(self.player_health / 2)
+        half_heart = self.player_health % 2 == 1
         for _ in range(full_hearts):
-            heart = Image(
-                source='assets/images/full_heart.png',
-                size=(50, 50),
-                allow_stretch=True,
-                keep_ratio=False
-            )
+            heart = Image(source='assets/images/full_heart.png', size=(50, 50), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(heart)
-
-        # Add half heart if applicable
         if half_heart:
-            half = Image(
-                source='assets/images/half_heart.png',
-                size=(50, 50),
-                allow_stretch=True,
-                keep_ratio=False
-            )
+            half = Image(source='assets/images/half_heart.png', size=(50, 50), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(half)
-
-        # Add blank hearts for remaining slots up to max_hearts
         remaining_hearts = max_hearts - full_hearts - (1 if half_heart else 0)
         for _ in range(remaining_hearts):
-            blank = Image(
-                source='assets/images/blank_heart.png',
-                size=(50, 50),
-                allow_stretch=True,
-                keep_ratio=False
-            )
+            blank = Image(source='assets/images/blank_heart.png', size=(50, 50), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(blank)
 
     def update(self, dt):
@@ -216,11 +192,10 @@ class Game(Widget):
             self.apply_gravity(self.player)
             self.player.move()
             self.on_platform = self.handle_platform_collision(self.player)
-            self.player_health = self.player.health  # Sync with Player's health
-            # print(f"Player Position - x: {self.player.x:.2f}, y: {self.player.y:.2f}, on_platform: {self.on_platform}, HP: {self.player.health}")
+            self.player_health = self.player.health
             if self.debug_hitbox:
                 self.player.update_hitbox_debug()
-        
+
         if self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
             self.spawn_portal()
             print(f"Portal spawned after clearing Stage {self.stage_number}")
@@ -244,16 +219,13 @@ class Game(Widget):
         if self.ENABLE_ENEMIES:
             self.update_enemies()
 
-        # Check collision with portal and advance to next stage
         if self.portal and self.player and Hitbox.collide(self.player.get_hitbox_rect(), self.portal.get_hitbox_rect()):
             self.next_stage()
 
-        # เรียก spawn_portal เมื่อเคลียร์ด่าน (Stage 1: ศัตรูหมด)
         if self.stage_number == 1 and self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
             self.spawn_portal()
             print("Portal spawned after clearing Stage 1")
 
-        # Check for game completion (last stage, no enemies or boss)
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
             print("Game Completed! All stages cleared!")
@@ -265,7 +237,7 @@ class Game(Widget):
     def next_stage(self):
         """Advance to the next stage."""
         if self.stage_number >= self.MAX_STAGES:
-            return  # Stop if at max stage
+            return
         self.stage_number += 1
         print(f"Moving to Stage {self.stage_number}")
         for attack in self.player_attacks + self.enemy_attacks:
@@ -282,17 +254,14 @@ class Game(Widget):
             self.spawn_initial_enemies()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                # print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
             self.stage.spawn_obstacles()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                # print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
             self.player.velocity_y = 0
-        # ไม่เรียก self.spawn_portal() ที่นี่ แต่ให้จัดการใน update
-        self.update_hp_hearts()  # Reset hearts on stage change
+        self.update_hp_hearts()
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -371,7 +340,8 @@ class Game(Widget):
                             self.player_attacks.remove(attack)
                             if enemy.health <= 0:
                                 self.score += 100
-                                print(f"Enemy killed! Score increased to {self.score}")
+                                self.last_enemy_death_pos = [enemy.x, enemy.y]  # Update death position
+                                print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
                             break
 
         for attack in self.enemy_attacks[:]:
@@ -391,8 +361,10 @@ class Game(Widget):
             self.handle_platform_collision(enemy)
             if Hitbox.collide(self.player.get_hitbox_rect(), enemy.get_hitbox_rect()):
                 self.player.take_damage(1)
+                self.last_enemy_death_pos = [enemy.x, enemy.y]  # Update death position on collision
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
+                print(f"Enemy collision death at {self.last_enemy_death_pos}")
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
@@ -428,5 +400,5 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        # ไม่เรียก self.spawn_portal() ที่นี่
-        self.update_hp_hearts()  # Reset hearts
+        self.last_enemy_death_pos = [Window.width - 60, 10]  # Reset to default
+        self.update_hp_hearts()
