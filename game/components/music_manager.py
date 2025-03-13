@@ -6,7 +6,7 @@ class MusicManager:
     def __init__(self):
         """Initialize the music manager with audio files."""
         # Background music
-        self.menu_music = SoundLoader.load('assets/audio/menu_music.mp3')  # เพลงใหม่สำหรับเมนู
+        self.menu_music = SoundLoader.load('assets/audio/menu_music.mp3')
         self.background_music = SoundLoader.load('assets/audio/background_music.mp3')
         self.stage_100_music = SoundLoader.load('assets/audio/stage_100_music.mp3')
         self.current_music = None
@@ -18,6 +18,10 @@ class MusicManager:
         self.jump_sound = SoundLoader.load('assets/audio/jump.mp3')
         self.spawn_sound = SoundLoader.load('assets/audio/spawn.mp3')
         self.die_sound = SoundLoader.load('assets/audio/die.mp3')
+        
+        # Default volumes
+        self.effects_volume = 1.0
+        self.set_effects_volume(self.effects_volume)  # ตั้งค่าเริ่มต้น
 
     def play_menu_music(self):
         """Play the menu background music."""
@@ -25,7 +29,7 @@ class MusicManager:
             self.current_music.stop()
         self.current_music = self.menu_music
         if self.current_music:
-            self.current_music.volume = 1.0
+            self.current_music.volume = 1.0  # เริ่มต้นที่ 1.0 แต่จะถูกปรับใน MainMenu
             self.current_music.loop = True
             self.current_music.play()
             print("Playing menu music")
@@ -42,7 +46,7 @@ class MusicManager:
                 self.current_music.stop()
             self.current_music = new_music
             if self.current_music:
-                # ไม่ตั้ง volume ที่นี่ เพราะจะรับจาก MainMenu
+                # Volume จะถูกตั้งจาก MainMenu
                 self.current_music.loop = True
                 self.current_music.play()
                 print(f"Playing music for stage {stage_number}")
@@ -84,28 +88,37 @@ class MusicManager:
 
         self.fade_event = Clock.schedule_interval(_fade, 1.0 / 60.0)
 
+    def set_effects_volume(self, volume):
+        """Set the volume for all sound effects."""
+        self.effects_volume = volume
+        if self.walk_sound:
+            self.walk_sound.volume = volume * 0.5  # คงสัดส่วนเดิม
+        if self.shoot_sound:
+            self.shoot_sound.volume = volume * 0.7
+        if self.jump_sound:
+            self.jump_sound.volume = volume * 0.6
+        if self.spawn_sound:
+            self.spawn_sound.volume = volume * 0.5
+        if self.die_sound:
+            self.die_sound.volume = volume * 0.8
+
     # Sound effect methods
     def play_walk(self):
         if self.walk_sound:
-            self.walk_sound.volume = 0.5
             self.walk_sound.play()
 
     def play_shoot(self):
         if self.shoot_sound:
-            self.shoot_sound.volume = 0.7
             self.shoot_sound.play()
 
     def play_jump(self):
         if self.jump_sound:
-            self.jump_sound.volume = 0.6
             self.jump_sound.play()
 
     def play_spawn(self):
         if self.spawn_sound:
-            self.spawn_sound.volume = 0.5
             self.spawn_sound.play()
 
     def play_die(self):
         if self.die_sound:
-            self.die_sound.volume = 0.8
             self.die_sound.play()
