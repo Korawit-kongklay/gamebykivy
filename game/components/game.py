@@ -8,6 +8,7 @@ from .hitbox import Hitbox
 from .boss import Boss
 from .enemy import Enemy
 from .attack import ProjectileAttack
+from components.music_manager import MusicManager
 
 class Game(Widget):
     """Main game widget managing game state, entities, and interactions."""
@@ -30,11 +31,13 @@ class Game(Widget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.music_manager = MusicManager()
         self.initialize_game()
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         if self.ENABLE_BOSS:
             Clock.schedule_interval(self.spawn_boss_check, 5.0)
+        self.music_manager.play_music(self.stage_number)
 
     def initialize_game(self):
         """Initialize the game state and entities."""
@@ -176,6 +179,7 @@ class Game(Widget):
             self.player.pos = (100, 0)
             self.player.velocity_x = 0
             self.player.velocity_y = 0
+        self.music_manager.play_music(self.stage_number)
 
     def update_hitbox_visibility(self):
         if self.player:
@@ -312,3 +316,4 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+        self.music_manager.play_music(self.stage_number)
