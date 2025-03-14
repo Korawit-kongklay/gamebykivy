@@ -38,7 +38,7 @@ class Game(Widget):
     ENABLE_BOSS = True  # เปลี่ยนเป็น True เพื่อให้บอสเกิดใน Stage 5
     MAX_STAGES = 5
 
-    def __init__(self, initial_player_hp=20, **kwargs):
+    def __init__(self, initial_player_hp=100, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
         self.hp_layout = None
@@ -138,7 +138,8 @@ class Game(Widget):
         scale_x = Window.width / 1280
         scale_y = Window.height / 720
         self.boss = Boss(pos=(Window.width - 60 * scale_x, 0))
-        self.boss.size = (60 * scale_x, 80 * scale_y)
+        self.boss.size = (240 * scale_x, 240 * scale_y)
+        self.boss.target = self.player  # Set the target to the player
         self.add_widget(self.boss)
         self.boss.velocity_x = -1 * scale_x
         self.music_manager.play_spawn()
@@ -186,7 +187,7 @@ class Game(Widget):
         scale_y = Window.height / 720
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
-                self.player.velocity_y = 6 * scale_y
+                self.player.velocity_y = 9 * scale_y
                 self.music_manager.play_jump()
         elif keycode[1] in ('left', 'a'):
             self.player.velocity_x = -5 * scale_x
