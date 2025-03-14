@@ -1,27 +1,31 @@
-# music_manager.py
 from kivy.core.audio import SoundLoader
 from kivy.clock import Clock
 
 class MusicManager:
-    def __init__(self):
-        """Initialize the music manager with audio files."""
-        # Background music
-        self.menu_music = SoundLoader.load('assets/audio/menu_music.mp3')
-        self.background_music = SoundLoader.load('assets/audio/background_music.mp3')
-        self.stage_100_music = SoundLoader.load('assets/audio/stage_100_music.mp3')
-        self.current_music = None
-        self.fade_event = None
+    _instance = None
 
-        # Sound effects
-        self.walk_sound = SoundLoader.load('assets/audio/walk.mp3')
-        self.shoot_sound = SoundLoader.load('assets/audio/shoot.mp3')
-        self.jump_sound = SoundLoader.load('assets/audio/jump.mp3')
-        self.spawn_sound = SoundLoader.load('assets/audio/spawn.mp3')
-        self.die_sound = SoundLoader.load('assets/audio/die.mp3')
-        
-        # Default volumes
-        self.effects_volume = 1.0
-        self.set_effects_volume(self.effects_volume)  # ตั้งค่าเริ่มต้น
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(MusicManager, cls).__new__(cls)
+            # Initialize audio files only once
+            cls._instance.menu_music = SoundLoader.load('assets/audio/menu_music.mp3')
+            cls._instance.background_music = SoundLoader.load('assets/audio/background_music.mp3')
+            cls._instance.stage_100_music = SoundLoader.load('assets/audio/stage_100_music.mp3')
+            cls._instance.current_music = None
+            cls._instance.fade_event = None
+
+            # Sound effects
+            cls._instance.walk_sound = SoundLoader.load('assets/audio/walk.mp3')
+            cls._instance.shoot_sound = SoundLoader.load('assets/audio/shoot.mp3')
+            cls._instance.jump_sound = SoundLoader.load('assets/audio/jump.mp3')
+            cls._instance.spawn_sound = SoundLoader.load('assets/audio/spawn.mp3')
+            cls._instance.die_sound = SoundLoader.load('assets/audio/die.mp3')
+            
+            # Default volumes
+            cls._instance.effects_volume = 1.0
+            cls._instance.music_volume = 0.1  # เพิ่มตัวแปรเก็บ volume ของเพลง
+            cls._instance.set_effects_volume(cls._instance.effects_volume)
+        return cls._instance
 
     def play_menu_music(self):
         """Play the menu background music."""
@@ -29,7 +33,7 @@ class MusicManager:
             self.current_music.stop()
         self.current_music = self.menu_music
         if self.current_music:
-            self.current_music.volume = 1.0  # เริ่มต้นที่ 1.0 แต่จะถูกปรับใน MainMenu
+            self.current_music.volume = self.music_volume
             self.current_music.loop = True
             self.current_music.play()
             print("Playing menu music")
@@ -46,7 +50,7 @@ class MusicManager:
                 self.current_music.stop()
             self.current_music = new_music
             if self.current_music:
-                # Volume จะถูกตั้งจาก MainMenu
+                self.current_music.volume = self.music_volume
                 self.current_music.loop = True
                 self.current_music.play()
                 print(f"Playing music for stage {stage_number}")
@@ -88,11 +92,17 @@ class MusicManager:
 
         self.fade_event = Clock.schedule_interval(_fade, 1.0 / 60.0)
 
+    def set_music_volume(self, volume):
+        """Set the volume for background music."""
+        self.music_volume = volume
+        if self.current_music:
+            self.current_music.volume = volume
+
     def set_effects_volume(self, volume):
         """Set the volume for all sound effects."""
         self.effects_volume = volume
         if self.walk_sound:
-            self.walk_sound.volume = volume * 0.5  # คงสัดส่วนเดิม
+            self.walk_sound.volume = volume * 0.5
         if self.shoot_sound:
             self.shoot_sound.volume = volume * 0.7
         if self.jump_sound:

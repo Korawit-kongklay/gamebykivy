@@ -47,11 +47,3 @@
         font_size: 20
         top: root.top + 20
         right: root.right - 60
-    # Restart Button
-    Button:
-        text: 'Restart'
-        size_hint: 0.2, 0.1
-        pos_hint: {'center_x': 0.5, 'center_y': 0.4}
-        opacity: 0 if root.game_active else 1
-        disabled: root.game_active
-        on_press: root.restart()
