@@ -1,5 +1,5 @@
-from .enemy import Enemy
+from kivy.uix.widget import Widget
 
-class Obstacle(Enemy):
-    def __init__(self, **kwargs):
-        super().__init__(size=(50, 50), **kwargs)
+class Obstacle(Widget):
+    def move(self):
+        self.x -= 3  # ความเร็วสิ่งกีดขวาง

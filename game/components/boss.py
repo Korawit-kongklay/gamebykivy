@@ -15,9 +15,9 @@ class Boss(Enemy):
     velocity_x = NumericProperty(0)  # Start stationary
     velocity_y = NumericProperty(0)  # From Enemy
     velocity = ReferenceListProperty(velocity_x, velocity_y)  # From Enemy
-    move_speed = NumericProperty(3.0)  # Speed for chasing/wandering
-    vision_range = NumericProperty(0)  # Effectively infinite
-    attack_range = NumericProperty(150)  # Range for triggering attacks
+    move_speed = NumericProperty(2.0)  # Speed for chasing/wandering
+    vision_range = NumericProperty(300)  # Effectively infinite
+    attack_range = NumericProperty(100)  # Range for triggering attacks
     facing_right = BooleanProperty(True)  # Track direction like Enemy
     is_enraged = False  # Track enrage mode
 
@@ -35,17 +35,17 @@ class Boss(Enemy):
         self.last_teleport_time = 0
         self.last_ground_slam_time = 0
         # Cooldowns for attacks
-        self.dash_cooldown = 3.0
-        self.summon_cooldown = 5.0
-        self.aoe_cooldown = 4.0
-        self.teleport_cooldown = 6.0
+        self.dash_cooldown = 5.0
+        self.summon_cooldown = 15.0
+        self.aoe_cooldown = 10.0
+        self.teleport_cooldown = 10.0
         self.ground_slam_cooldown = 5.0
         self.enrage_threshold = 2  # Enter enrage mode at HP <= 2
         self.aoe_warning = None  # Widget for AoE warning
         # AI-specific attributes from Enemy, adjusted for longer idling
         self.wander_target = None
         self.wander_timer = 0
-        self.wander_duration = random.uniform(5.0, 10.0)  # Increased range for longer idling
+        self.wander_duration = random.uniform(5.0, 15.0)  # Increased range for longer idling
         self.last_jump_time = 0
         self.next_jump_interval = random.uniform(2.0, 3.0)
 
