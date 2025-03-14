@@ -333,6 +333,7 @@ class Game(Widget):
 
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
+            self.music_manager.play_victory()
             self.music_manager.fade_out_music(duration=1.0)
             self.show_restart_button(game_completed=True)
 
