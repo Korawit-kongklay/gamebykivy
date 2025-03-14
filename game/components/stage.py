@@ -42,12 +42,16 @@ class Stage(Widget):
         platform_height = self.PLATFORM_HEIGHT * height_scale
         buffer_zone = self.BUFFER_ZONE * width_scale  # Scale buffer zone dynamically
 
+        # Define max_y to avoid overlapping with HP layout (55) and Score Label (25)
+        max_y = Window.height - (55 * height_scale + 25 * height_scale)  # Buffer for HP (55) + Label (25)
+
         # Generate random platforms
         platforms = self.generate_random_platforms(
             num_platforms=self.NUM_PLATFORMS,
             platform_width=platform_width,
             platform_height=platform_height,
-            buffer_zone=buffer_zone
+            buffer_zone=buffer_zone,
+            max_y=max_y
         )
 
         # Add platforms to the stage
@@ -58,16 +62,16 @@ class Stage(Widget):
 
         print(f"Stage {self.stage_number}: Generated {len(platforms)} platforms")
 
-    def generate_random_platforms(self, num_platforms, platform_width, platform_height, buffer_zone):
-        """Generate random, non-overlapping platform positions."""
+    def generate_random_platforms(self, num_platforms, platform_width, platform_height, buffer_zone, max_y):
+        """Generate random, non-overlapping platform positions with a maximum y limit."""
         platforms = []
 
         for _ in range(num_platforms):
             attempts = 0
             while attempts < self.MAX_ATTEMPTS:
-                # Generate positions within window bounds, accounting for buffer
+                # Generate positions within window bounds, accounting for buffer and max_y
                 x = random.uniform(buffer_zone, Window.width - platform_width - buffer_zone)
-                y = random.uniform(buffer_zone, Window.height - platform_height - buffer_zone)
+                y = random.uniform(buffer_zone, max_y - platform_height - buffer_zone)  # Limit y to max_y
                 new_platform = (x, y)
 
                 if not self.check_overlap(new_platform, platforms, platform_width, platform_height, buffer_zone):

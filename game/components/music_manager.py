@@ -23,8 +23,8 @@ class MusicManager:
             cls._instance.victory_sound = SoundLoader.load('assets/audio/victory.mp3')
             
             # Default volumes
-            cls._instance.effects_volume = 0.3
-            cls._instance.music_volume = 0.3  # เพิ่มตัวแปรเก็บ volume ของเพลง
+            cls._instance.effects_volume = 0.4
+            cls._instance.music_volume = 0.68  # เพิ่มตัวแปรเก็บ volume ของเพลง
             cls._instance.set_effects_volume(cls._instance.effects_volume)
         return cls._instance
 
