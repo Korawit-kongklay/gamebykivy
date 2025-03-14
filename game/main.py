@@ -8,7 +8,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
 from kivy.clock import Clock
 from kivy.properties import ListProperty, NumericProperty
-from components.menubackground import GifLoader
+from components.background import GifLoader
 from components.game import Game
 from components.music_manager import MusicManager
 import os
