@@ -30,7 +30,7 @@ class MainMenu(BoxLayout):
 
         # Menu title
         self.add_widget(Label(
-            text='DinoCon',
+            text='DinoCON',
             font_size=120,
             size_hint=(1, 0.3),  # ลดขนาด height ของ title เล็กน้อย
             bold=True
