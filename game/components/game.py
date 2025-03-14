@@ -2,7 +2,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.uix.button import Button
-from kivy.uix.label import Label  # เพิ่มการ import Label
+from kivy.uix.label import Label
 from kivy.app import App
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
@@ -23,7 +23,7 @@ class Game(Widget):
     portal = ObjectProperty(None, allownone=True)
     player = ObjectProperty(None)
     stage = ObjectProperty(None)
-    boss = ObjectProperty(None, allownone=True)  # แก้ไขให้รับ None ได้
+    boss = ObjectProperty(None, allownone=True)
     score = NumericProperty(0)
     stage_number = NumericProperty(1)
     player_health = NumericProperty(20)
@@ -37,14 +37,14 @@ class Game(Widget):
     ENABLE_PLAYER = True
     ENABLE_ENEMIES = True
     ENABLE_ATTACKS = True
-    ENABLE_BOSS = True  # เปลี่ยนเป็น True เพื่อให้บอสเกิดใน Stage 5
+    ENABLE_BOSS = True
     MAX_STAGES = 5
 
-    def __init__(self, music_manager=None, initial_player_hp=20, **kwargs):
+    def __init__(self, music_manager=None, initial_player_hp=100, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
         self.hp_layout = None
-        self.music_manager = music_manager if music_manager else MusicManager()  # รับ MusicManager หรือสร้างใหม่ถ้าไม่มี
+        self.music_manager = music_manager if music_manager else MusicManager()
         self.walk_sound_playing = False
         self.restart_button = None
         self.end_game_label = None
@@ -52,7 +52,6 @@ class Game(Widget):
         self.bind_inputs()
         Clock.schedule_interval(self.update, 1.0 / 60.0)
         self.music_manager.play_music(self.stage_number)
-        # Bind to window resize
         Window.bind(on_resize=self.on_window_resize)
 
     def initialize_game(self):
@@ -73,17 +72,19 @@ class Game(Widget):
             self.music_manager.play_spawn()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
-        self.attack_cooldown = 0.5
+        self.attack_cooldown = 0.1
         self.last_attack_time = 0
         self.mouse_pos = (0, 0)
         self.score = 0
         self.on_platform = False
         self.last_enemy_death_pos = [Window.width - 60, 10]
-        self.hp_layout = self.ids.hp_layout
-        self.hp_layout.bind(pos=self._update_hp_position)
+        try:
+            self.hp_layout = self.ids.hp_layout
+            self.hp_layout.bind(pos=self._update_hp_position)
+        except AttributeError:
+            print("Warning: hp_layout not found in ids. Ensure .kv file is properly set up.")
+            self.hp_layout = None
         self.update_hp_hearts()
-        # Spawn boss if in Stage 5
         if self.stage_number == 5 and self.ENABLE_BOSS and not self.boss:
             self.spawn_boss()
 
@@ -100,7 +101,6 @@ class Game(Widget):
             self.player.size = (80 * scale_x, 80 * scale_y)
 
         if self.ENABLE_ENEMIES:
-            enemy_count = len(self.stage.obstacles)
             self.stage.obstacles.clear()
             self.spawn_initial_enemies()
 
@@ -108,7 +108,7 @@ class Game(Widget):
             self.remove_widget(self.portal)
             portal_x = max(0, min(self.last_enemy_death_pos[0] * scale_x, Window.width - 80 * scale_x))
             portal_y = max(0, min(self.last_enemy_death_pos[1] * scale_y, Window.height - 240 * scale_y))
-            self.portal = Portal(pos=(portal_x, portal_y))
+            self.portal = Portal(pos=(portal_x, portal_y), player=self.player)
             self.add_widget(self.portal)
 
         if self.boss:
@@ -116,6 +116,7 @@ class Game(Widget):
             self.boss.pos = (Window.width - 60 * scale_x, self.boss.y)
 
         self.update_hp_hearts()
+        self._update_restart_ui_positions()
 
     def spawn_initial_enemies(self):
         """Spawn initial enemies at random positions based on stage number, including FlyingEnemy."""
@@ -137,12 +138,13 @@ class Game(Widget):
                 enemy.target = self.player
 
     def spawn_boss(self):
-        """Spawn the boss in Stage 5."""
-        print("Spawning Boss in Stage 5!")
         scale_x = Window.width / 1280
         scale_y = Window.height / 720
         self.boss = Boss(pos=(Window.width - 60 * scale_x, 0))
-        self.boss.size = (60 * scale_x, 80 * scale_y)
+        self.boss.size = (240 * scale_x, 240 * scale_y)
+        self.boss.health = 200  # Set boss HP to 50
+        self.boss.max_health = 200  # Optional: Set max_health for HP bar scaling
+        self.boss.target = self.player
         self.add_widget(self.boss)
         self.boss.velocity_x = -1 * scale_x
         self.music_manager.play_spawn()
@@ -155,9 +157,8 @@ class Game(Widget):
         scale_y = Window.height / 720
         portal_x = max(0, min(self.last_enemy_death_pos[0] * scale_x, Window.width - 80 * scale_x))
         portal_y = max(0, min(self.last_enemy_death_pos[1] * scale_y, Window.height - 240 * scale_y))
-        self.portal = Portal(pos=(portal_x, portal_y))
+        self.portal = Portal(pos=(portal_x, portal_y), player=self.player)
         self.add_widget(self.portal)
-        print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
 
     def _update_hp_position(self, instance, value):
         self.update_hp_hearts()
@@ -190,7 +191,7 @@ class Game(Widget):
         scale_y = Window.height / 720
         if keycode[1] == 'spacebar':
             if self.can_jump(self.player):
-                self.player.velocity_y = 6 * scale_y
+                self.player.velocity_y = 9 * scale_y
                 self.music_manager.play_jump()
         elif keycode[1] in ('left', 'a'):
             self.player.velocity_x = -5 * scale_x
@@ -247,9 +248,15 @@ class Game(Widget):
             blank = Image(source='assets/images/blank_heart.png', size=(50 * scale_x, 50 * scale_x), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(blank)
 
+    def _update_restart_ui_positions(self):
+        """Update positions of restart button and end game label on window resize."""
+        if self.restart_button:
+            self.restart_button.pos = (Window.width / 2 - 150, Window.height / 2 - 50)
+        if self.end_game_label:
+            self.end_game_label.pos = (Window.width / 2 - 150, Window.height / 2 + 75)
+
     def show_restart_button(self, game_over=False, game_completed=False):
         """Show a large restart button and end-game message in the center of the screen."""
-        # ลบปุ่มและข้อความเก่าถ้ามี
         if self.restart_button:
             self.remove_widget(self.restart_button)
             self.restart_button = None
@@ -257,28 +264,25 @@ class Game(Widget):
             self.remove_widget(self.end_game_label)
             self.end_game_label = None
         
-        # เพิ่มข้อความ Victory หรือ Game Over
         self.end_game_label = Label(
             text='Victory!' if game_completed else 'Game Over!',
-            font_size=100,  # ขนาดตัวอักษรใหญ่
+            font_size=100,
             size_hint=(None, None),
             size=(300, 100),
-            pos=(Window.width / 2 - 150, Window.height / 2 + 75),  # เหนือปุ่ม Restart
-            color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)  # เขียวถ้าชนะ แดงถ้าแพ้
+            pos=(Window.width / 2 - 150, Window.height / 2 + 75),
+            color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)
         )
         self.add_widget(self.end_game_label)
         
-        # สร้างปุ่ม restart ขนาดใหญ่
         self.restart_button = Button(
             text='Restart Game',
             size_hint=(None, None),
-            size=(300, 100),  # ขนาดใหญ่
-            pos=(Window.width / 2 - 150, Window.height / 2 - 50),  # อยู่กลางจอ
-            font_size=30,  # ขนาดตัวอักษรใหญ่
-            background_color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)  # เขียวถ้าชนะ แดงถ้าแพ้
+            size=(300, 100),
+            pos=(Window.width / 2 - 150, Window.height / 2 - 50),
+            font_size=30,
+            background_color=(0, 1, 0, 1) if game_completed else (1, 0, 0, 1)
         )
         
-        # ผูกปุ่มกับการรีสตาร์ท
         if game_over:
             self.restart_button.bind(on_press=lambda instance: self.restart(game_over=True))
         elif game_completed:
@@ -302,17 +306,16 @@ class Game(Widget):
 
         if self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
             self.spawn_portal()
-            print(f"Portal spawned after clearing Stage {self.stage_number}")
 
         if self.boss:
             self.apply_gravity(self.boss)
             self.boss.move()
-            self.boss.update(self, dt)  # อัปเดตสกิลของบอส
+            self.boss.update(self, dt)
             self.handle_platform_collision(self.boss)
             if self.boss.x < 0:
                 self.boss.x = 0
             if self.boss.health <= 0 and not self.portal:
-                self.spawn_portal()  # เกิด portal เมื่อบอสตาย
+                self.spawn_portal()
             if self.debug_hitbox:
                 self.boss.update_hitbox_debug()
 
@@ -327,27 +330,22 @@ class Game(Widget):
 
         if self.stage_number == 1 and self.ENABLE_ENEMIES and len(self.stage.obstacles) == 0 and not self.boss and not self.portal:
             self.spawn_portal()
-            print("Portal spawned after clearing Stage 1")
 
         if self.stage_number == self.MAX_STAGES and not self.stage.obstacles and not self.boss:
             self.game_active = False
-            print("Game Completed! All stages cleared!")
-            self.music_manager.play_victory()
             self.music_manager.fade_out_music(duration=1.0)
-            self.show_restart_button(game_completed=True)  # แสดงปุ่มและข้อความ
+            self.show_restart_button(game_completed=True)
 
         if self.player_health <= 0:
             self.game_active = False
-            print("Game Over!")
-            self.music_manager.play_die()  # เล่นเสียงตาย
+            self.music_manager.play_die()
             self.music_manager.fade_out_music(duration=1.0)
-            self.show_restart_button(game_over=True)  # แสดงปุ่มและข้อความ
+            self.show_restart_button(game_over=True)
 
     def next_stage(self):
         if self.stage_number >= self.MAX_STAGES:
             return
         self.stage_number += 1
-        print(f"Moving to Stage {self.stage_number}")
         for attack in self.player_attacks + self.enemy_attacks:
             self.remove_widget(attack)
         self.player_attacks.clear()
@@ -363,7 +361,6 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 self.music_manager.play_spawn()
-                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             scale_x = Window.width / 1280
             self.player.pos = (100 * scale_x, 0)
@@ -371,7 +368,6 @@ class Game(Widget):
             self.player.velocity_y = 0
         self.update_hp_hearts()
         self.music_manager.play_music(self.stage_number)
-        # Spawn boss if in Stage 5
         if self.stage_number == 5 and self.ENABLE_BOSS and not self.boss:
             self.spawn_boss()
 
@@ -429,11 +425,9 @@ class Game(Widget):
 
     def update_attacks(self):
         scale_x = Window.width / 1280
-        # Step 1: Update player attacks and check collisions with enemies and boss
         for attack in self.player_attacks[:]:
             attack.move()
             attack_rect = attack.get_hitbox_rect()
-            print(f"Player attack at: {attack_rect}")  # Debug
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 try:
                     self.remove_widget(attack)
@@ -468,14 +462,11 @@ class Game(Widget):
                             if enemy.health <= 0:
                                 self.score += 100
                                 self.last_enemy_death_pos = [enemy.x / scale_x, enemy.y / (Window.height / 720)]
-                                print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
                             break
 
-        # Step 2: Update enemy attacks and check collisions with player
         for attack in self.enemy_attacks[:]:
             attack.move()
             attack_rect = attack.get_hitbox_rect()
-            print(f"Enemy attack at: {attack_rect}")  # Debug
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 try:
                     self.remove_widget(attack)
@@ -490,7 +481,6 @@ class Game(Widget):
                 except Exception as e:
                     print(f"Error removing enemy attack: {e}")
 
-        # Step 3: Check collisions between player attacks and enemy attacks
         collisions = []
         for player_attack in self.player_attacks[:]:
             player_attack_rect = player_attack.get_hitbox_rect()
@@ -498,10 +488,8 @@ class Game(Widget):
                 enemy_attack_rect = enemy_attack.get_hitbox_rect()
                 if Hitbox.collide(player_attack_rect, enemy_attack_rect):
                     collisions.append((player_attack, enemy_attack))
-                    print(f"Collision detected: Player attack {player_attack_rect} vs Enemy attack {enemy_attack_rect}")
                     break
 
-        # Process all collisions
         for player_attack, enemy_attack in collisions:
             try:
                 if player_attack in self.player_attacks:
@@ -510,7 +498,6 @@ class Game(Widget):
                 if enemy_attack in self.enemy_attacks:
                     self.remove_widget(enemy_attack)
                     self.enemy_attacks.remove(enemy_attack)
-                print("Player projectile collided with enemy projectile! Both destroyed.")
             except Exception as e:
                 print(f"Error handling collision: {e}")
 
@@ -529,7 +516,6 @@ class Game(Widget):
                 self.last_enemy_death_pos = [enemy.x / scale_x, enemy.y / scale_y]
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
-                print(f"Enemy collision death at {self.last_enemy_death_pos}")
             elif enemy.x < -enemy.width:
                 self.stage.remove_widget(enemy)
                 self.stage.obstacles.remove(enemy)
@@ -544,7 +530,6 @@ class Game(Widget):
             game_over (bool): True if restarting due to player death
             game_completed (bool): True if restarting after clearing all stages
         """
-        # ลบปุ่มและข้อความเก่า
         if self.restart_button:
             self.remove_widget(self.restart_button)
             self.restart_button = None
@@ -552,10 +537,8 @@ class Game(Widget):
             self.remove_widget(self.end_game_label)
             self.end_game_label = None
         
-        # หยุดเพลงปัจจุบันก่อนเริ่มใหม่
         self.music_manager.fade_out_music(duration=0.5)
         
-        # แสดงข้อความตามสถานะเกม
         if game_over:
             print("Game Over! Restarting game...")
         elif game_completed:
@@ -563,7 +546,6 @@ class Game(Widget):
         else:
             print("Restarting game...")
 
-        # รีเซ็ตสถานะเกม
         self.game_active = True
         self.score = 0
         self.stage_number = 1
@@ -572,29 +554,24 @@ class Game(Widget):
         self.player_attacks.clear()
         self.enemy_attacks.clear()
         
-        # ลบ boss ถ้ามี
         if self.boss:
             self.remove_widget(self.boss)
             self.boss = None
         
-        # ลบ portal ถ้ามี
         if self.portal:
             self.remove_widget(self.portal)
             self.portal = None
         
-        # รีเซ็ต stage
         self.remove_widget(self.stage)
         self.stage = Stage(stage_number=self.stage_number, spawn_obstacles=self.ENABLE_ENEMIES)
         self.add_widget(self.stage)
         
-        # สร้างศัตรูใหม่ถ้าเปิดใช้งาน
         if self.ENABLE_ENEMIES:
             self.spawn_initial_enemies()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                self.music_manager.play_spawn()  # เล่นเสียง spawn สำหรับศัตรู
+                self.music_manager.play_spawn()
         
-        # รีเซ็ต player
         if self.ENABLE_PLAYER:
             self.remove_widget(self.player)
             scale_x = Window.width / 1280
@@ -607,20 +584,16 @@ class Game(Widget):
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         
-        # รีเซ็ตตำแหน่งการตายล่าสุดของศัตรู
         self.last_enemy_death_pos = [Window.width - 60, 10]
         
-        # อัพเดท UI
         self.update_hp_hearts()
         
-        # เริ่มเพลงใหม่หลังจากรีเซ็ตทุกอย่างเสร็จสิ้น
-        Clock.schedule_once(lambda dt: self.music_manager.play_music(self.stage_number), 0.6)  # หน่วงเวลาเล็กน้อยหลัง fade out
+        Clock.schedule_once(lambda dt: self.music_manager.play_music(self.stage_number), 0.6)
 
     def show_pause_menu(self):
         from .pause_menu import PauseMenu
         app = App.get_running_app()
         app.root.clear_widgets()
-        pause_menu = PauseMenu(self)  # ส่งตัวเอง (Game instance) ไปให้ PauseMenu
+        pause_menu = PauseMenu(self)
         app.root.add_widget(pause_menu)

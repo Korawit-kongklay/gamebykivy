@@ -13,17 +13,18 @@ class Enemy(Character):
     velocity_y = NumericProperty(0)
     velocity = ReferenceListProperty(velocity_x, velocity_y)
     target = ObjectProperty(None)
-    attack_range = NumericProperty(100)
+    attack_range = NumericProperty(500)
     attack_cooldown = NumericProperty(1.0)
     move_speed = NumericProperty(3.0)
-    vision_range = NumericProperty(200)
+    vision_range = NumericProperty(500)
     facing_right = BooleanProperty(True)
-    health = NumericProperty(100)
-    max_health = NumericProperty(100)  # Added for HP bar scaling
+    health = NumericProperty(500)  # Default HP set to 500 for turtle
+    max_health = NumericProperty(500)  # Default max HP set to 500
 
-    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (80, 80), health=100, **kwargs):
+    def __init__(self, gif_path: str = 'assets/gifs/turtle.gif', size: tuple = (80, 80), health=500, **kwargs):
         super().__init__(gif_path=gif_path, size=size, health=health, **kwargs)
-        self.max_health = health  # Set max_health to initial health
+        self.health = 500  # Explicitly set HP to 500
+        self.max_health = 500  # Set max_health to match
         self.last_attack_time = 0
         self.wander_target = None
         self.wander_timer = 0
@@ -53,7 +54,6 @@ class Enemy(Character):
 
     def update_ai(self, dt):
         if not self.target or not self.parent:
-            # print("Enemy: No target or parent assigned.")
             return
 
         player_center_x = self.target.x + self.target.width / 2
@@ -158,19 +158,11 @@ class Enemy(Character):
             print(f"Enemy at {self.pos} has died.")
 
     def attack(self):
-        from .attack import EnemyProjectile
-        if not self.parent or not isinstance(self.parent, Widget):
-            return
-        game = self.parent.parent if self.parent.parent else None
-        if game and hasattr(game, 'enemy_attacks'):
-            attack = EnemyProjectile(start_pos=(self.x + self.width / 2, self.y + self.height / 2),
-                                    target_pos=(self.target.x + self.target.width / 2, self.target.y + self.target.height / 2))
-            game.add_widget(attack)
-            game.enemy_attacks.append(attack)
+        """Turtles do not shoot attacks."""
+        pass  # Explicitly disable attack for turtles
 
     def update_hp_bar(self):
         """Draw or update the HP bar above the enemy."""
-        # Ensure hp_bar_instruction exists before removing it
         if hasattr(self, 'hp_bar_instruction') and self.hp_bar_instruction:
             self.canvas.after.remove(self.hp_bar_instruction)
         hp_width = (self.health / self.max_health) * self.width  # Scale bar width
@@ -187,8 +179,10 @@ class FlyingEnemy(Enemy):
     fly_amplitude = NumericProperty(50)  # Height of vertical oscillation
     fly_frequency = NumericProperty(1.0)  # Speed of oscillation
 
-    def __init__(self, gif_path: str = 'assets/gifs/fy.gif', size: tuple = (80, 80), health=50, **kwargs):
+    def __init__(self, gif_path: str = 'assets/gifs/fy.gif', size: tuple = (80, 80), health=300, **kwargs):
         super().__init__(gif_path=gif_path, size=size, health=health, **kwargs)
+        self.health = 300  # Explicitly set HP to 300 for flying enemy
+        self.max_health = 300  # Set max_health to match
         self.move_speed = 2.0  # Slightly slower horizontal speed
         self.vision_range = 300  # Wider vision for flying enemy
         self.attack_range = 150  # Longer attack range
@@ -280,3 +274,17 @@ class FlyingEnemy(Enemy):
         else:
             normalized_dx = dx / distance
             self.velocity_x = normalized_dx * self.move_speed * 0.7
+
+    def attack(self):
+        """Flying enemies shoot projectiles."""
+        from .attack import EnemyProjectile
+        if not self.parent or not isinstance(self.parent, Widget):
+            return
+        game = self.parent.parent if self.parent.parent else None
+        if game and hasattr(game, 'enemy_attacks'):
+            attack = EnemyProjectile(
+                start_pos=(self.x + self.width / 2, self.y + self.height / 2),
+                target_pos=(self.target.x + self.target.width / 2, self.target.y + self.target.height / 2)
+            )
+            game.add_widget(attack)
+            game.enemy_attacks.append(attack)

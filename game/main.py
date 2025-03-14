@@ -16,31 +16,27 @@ import os
 class MainMenu(BoxLayout):
     current_frame = NumericProperty(0)
     textures = ListProperty([])
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.padding = 50
         self.spacing = 20  # คงระยะห่างระหว่างปุ่มไว้
         self.music_manager = MusicManager()
-        self.menu_music_volume = 1.0
-        self.effects_volume = 1.0
-<<<<<<< HEAD
-=======
-        
-        # โหลด background GIF
-        self.load_background_gif()
->>>>>>> 83047c12ec58ca91e541a1c3d148d4ac34df08f8
-        
         self.music_manager.play_menu_music()
-        
+
+        # Load background GIF
+        self.load_background_gif()
+
+        # Menu title
         self.add_widget(Label(
             text='DinoCon',
             font_size=120,
             size_hint=(1, 0.3),  # ลดขนาด height ของ title เล็กน้อย
             bold=True
         ))
-        
+
+        # Start button
         self.start_button = Button(
             text='Start Game',
             size_hint=(0.4, 0.15),  # ปรับขนาดให้เล็กลงและสมส่วน
@@ -50,7 +46,8 @@ class MainMenu(BoxLayout):
         )
         self.start_button.bind(on_press=self.start_game)
         self.add_widget(self.start_button)
-        
+
+        # Settings button
         self.settings_button = Button(
             text='Settings',
             size_hint=(0.4, 0.15),  # ขนาดเท่ากับ Start Button
@@ -60,7 +57,8 @@ class MainMenu(BoxLayout):
         )
         self.settings_button.bind(on_press=self.show_settings)
         self.add_widget(self.settings_button)
-        
+
+        # Exit button
         self.exit_button = Button(
             text='Exit',
             size_hint=(0.4, 0.15),  # ขนาดเท่ากันทั้งสามปุ่ม
@@ -71,98 +69,84 @@ class MainMenu(BoxLayout):
         self.exit_button.bind(on_press=self.exit_game)
         self.add_widget(self.exit_button)
 
+        # Bind window resize to update background
+        Window.bind(on_resize=self.on_window_resize)
+
     def load_background_gif(self):
+        """Load and animate the background GIF."""
         try:
-            # ปรับ path ให้ตรงกับโครงสร้างโฟลเดอร์: game/assets/gifs/darkforest.gif
             gif_path = os.path.join(os.path.dirname(__file__), 'assets', 'gifs', 'darkforest.gif')
             frames = GifLoader.load_gif_frames(gif_path)
             self.textures = GifLoader.create_textures(frames)
             if self.textures:
-                # ใช้ขนาดของหน้าจอให้ GIF เต็มจอ
                 self.size = Window.size
                 with self.canvas.before:
                     Color(1, 1, 1, 1)
                     self.bg_rect = Rectangle(
-                        pos=(0, 0),  # ตั้งค่าเริ่มต้นที่มุมล่างซ้าย
-                        size=Window.size,  # ทำให้ขนาดเท่ากับหน้าจอ
+                        pos=(0, 0),
+                        size=Window.size,
                         texture=self.textures[0]
                     )
-                # ผูกการอัพเดทขนาดหน้าจอ
                 self.bind(size=self._update_rect, pos=self._update_rect)
                 Clock.schedule_interval(self.update_background, 0.1)
             else:
                 raise ValueError("No textures loaded for background")
         except Exception as e:
             print(f"Error loading background GIF: {e}")
+            # Fallback to solid color background
+            with self.canvas.before:
+                Color(0.2, 0.2, 0.2, 1)  # Dark gray fallback
+                self.bg_rect = Rectangle(pos=(0, 0), size=Window.size)
+            self.bind(size=self._update_rect, pos=self._update_rect)
 
     def _update_rect(self, instance, value):
-        """อัพเดทตำแหน่งและขนาดของ Rectangle เมื่อหน้าจอเปลี่ยน"""
+        """Update the position and size of the background rectangle."""
         if hasattr(self, 'bg_rect'):
             self.bg_rect.pos = self.pos
             self.bg_rect.size = self.size
 
     def update_background(self, dt):
+        """Update the background GIF frame."""
         if self.textures:
             self.current_frame = (self.current_frame + 1) % len(self.textures)
-            self.bg_rect.texture = self.textures[self.current_frame]  # แก้ไขที่นี่
+            self.bg_rect.texture = self.textures[self.current_frame]
+
+    def on_window_resize(self, window, width, height):
+        """Handle window resize to update background size."""
+        self.size = (width, height)
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.size = (width, height)
 
     def start_game(self, instance):
+        """Start the game by switching to the Game widget."""
         self.music_manager.stop_music()
         app = App.get_running_app()
         app.root.clear_widgets()
-<<<<<<< HEAD
-        game = Game()
-        game.music_manager.current_music.volume = self.menu_music_volume
-        game.music_manager.set_effects_volume(self.effects_volume)
-=======
         game = Game(music_manager=self.music_manager)
->>>>>>> 83047c12ec58ca91e541a1c3d148d4ac34df08f8
         app.root.add_widget(game)
 
     def show_settings(self, instance):
+        """Show the settings popup for volume control."""
         settings_content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        
+
+        # Music volume control
         music_label = Label(text='Background Music Volume')
         settings_content.add_widget(music_label)
-        
-        music_slider = Slider(
-            min=0,
-            max=1,
-            value=self.music_manager.music_volume,
-            step=0.1
-        )
+        music_slider = Slider(min=0, max=1, value=self.music_manager.music_volume, step=0.1)
         music_slider.bind(value=self.on_music_volume_change)
         settings_content.add_widget(music_slider)
-        
+
+        # Effects volume control
         effects_label = Label(text='Sound Effects Volume')
         settings_content.add_widget(effects_label)
-        
-        effects_slider = Slider(
-            min=0,
-            max=1,
-            value=self.music_manager.effects_volume,
-            step=0.1
-        )
+        effects_slider = Slider(min=0, max=1, value=self.music_manager.effects_volume, step=0.1)
         effects_slider.bind(value=self.on_effects_volume_change)
         settings_content.add_widget(effects_slider)
-        
-<<<<<<< HEAD
-        # Add resize button for testing
-        resize_button = Button(
-            text='Resize Window (800x600)',
-            size_hint=(1, 0.3)
-        )
-        resize_button.bind(on_press=self.resize_window)
-        settings_content.add_widget(resize_button)
-        
-=======
->>>>>>> 83047c12ec58ca91e541a1c3d148d4ac34df08f8
-        close_button = Button(
-            text='Close',
-            size_hint=(1, 0.3)
-        )
+
+        # Close button
+        close_button = Button(text='Close', size_hint=(1, 0.3))
         settings_content.add_widget(close_button)
-        
+
         popup = Popup(
             title='Settings',
             content=settings_content,
@@ -173,25 +157,15 @@ class MainMenu(BoxLayout):
         popup.open()
 
     def on_music_volume_change(self, instance, value):
-<<<<<<< HEAD
-        if self.music_manager.current_music:
-            self.music_manager.current_music.volume = value
-        self.menu_music_volume = value
-
-    def on_effects_volume_change(self, instance, value):
-        self.effects_volume = value
-=======
+        """Update background music volume."""
         self.music_manager.set_music_volume(value)
 
     def on_effects_volume_change(self, instance, value):
->>>>>>> 83047c12ec58ca91e541a1c3d148d4ac34df08f8
+        """Update sound effects volume."""
         self.music_manager.set_effects_volume(value)
 
-    def resize_window(self, instance):
-        """Test resizing the window."""
-        Window.size = (800, 600)  # Example size, adjust as needed
-
     def exit_game(self, instance):
+        """Exit the application."""
         self.music_manager.stop_music()
         App.get_running_app().stop()
 
