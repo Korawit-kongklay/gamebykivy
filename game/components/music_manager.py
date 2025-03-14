@@ -21,6 +21,7 @@ class MusicManager:
             cls._instance.spawn_sound = SoundLoader.load('assets/audio/spawn.mp3')
             cls._instance.die_sound = SoundLoader.load('assets/audio/die.mp3')
             cls._instance.victory_sound = SoundLoader.load('assets/audio/victory.mp3')
+            cls._instance.teleport_sound = SoundLoader.load('assets/audio/dangguitar.mp3')
             
             # Default volumes
             cls._instance.effects_volume = 0.4
@@ -113,7 +114,9 @@ class MusicManager:
         if self.die_sound:
             self.die_sound.volume = volume * 0.8
         if self.victory_sound:  
-            self.victory_sound.volume = volume * 0.9    
+            self.victory_sound.volume = volume * 0.9
+        if self.teleport_sound:  
+            self.teleport_sound.volume = volume * 0.7    
 
     # Sound effect methods
     def play_walk(self):
@@ -139,3 +142,7 @@ class MusicManager:
     def play_victory(self): 
         if self.victory_sound:
             self.victory_sound.play()
+    
+    def play_teleport(self):
+        if self.teleport_sound:
+            self.teleport_sound.play()

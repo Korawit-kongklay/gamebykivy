@@ -298,6 +298,7 @@ class Boss(Enemy):
     def teleport(self, game):
         """Teleport to a random position."""
         print("Boss is teleporting!")
+        game.music_manager.play_teleport()  
         new_x = random.uniform(0, Window.width - self.width)
         new_y = random.uniform(0, Window.height - self.height)
         self.pos = (new_x, new_y)
