@@ -20,10 +20,11 @@ class MusicManager:
             cls._instance.jump_sound = SoundLoader.load('assets/audio/jump.mp3')
             cls._instance.spawn_sound = SoundLoader.load('assets/audio/spawn.mp3')
             cls._instance.die_sound = SoundLoader.load('assets/audio/die.mp3')
+            cls._instance.victory_sound = SoundLoader.load('assets/audio/victory.mp3')
             
             # Default volumes
-            cls._instance.effects_volume = 1.0
-            cls._instance.music_volume = 0.1  # เพิ่มตัวแปรเก็บ volume ของเพลง
+            cls._instance.effects_volume = 0.3
+            cls._instance.music_volume = 0.3  # เพิ่มตัวแปรเก็บ volume ของเพลง
             cls._instance.set_effects_volume(cls._instance.effects_volume)
         return cls._instance
 
@@ -111,6 +112,8 @@ class MusicManager:
             self.spawn_sound.volume = volume * 0.5
         if self.die_sound:
             self.die_sound.volume = volume * 0.8
+        if self.victory_sound:  
+            self.victory_sound.volume = volume * 0.9    
 
     # Sound effect methods
     def play_walk(self):
@@ -132,3 +135,7 @@ class MusicManager:
     def play_die(self):
         if self.die_sound:
             self.die_sound.play()
+
+    def play_victory(self): 
+        if self.victory_sound:
+            self.victory_sound.play()
