@@ -92,7 +92,7 @@ class PauseMenu(BoxLayout):
         # Close Button
         close_button = Button(
             text='Close',
-            size_hint=(1, 0.3)
+            size_hint=(1, 1)
         )
         settings_content.add_widget(close_button)
         

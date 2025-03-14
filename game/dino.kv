@@ -1,4 +1,5 @@
 #:kivy 2.0.0
+#:import Window kivy.core.window.Window
 
 <Character>:
     canvas:
@@ -31,13 +32,13 @@
     size: root.size
     canvas.before:
         Rectangle:
-            pos: self.pos
-            size: self.size
+            pos: 0, 0  # Absolute window coordinates (bottom-left)
+            size: Window.size  # Use full window size
             source: 'assets/gifs/darkforest.gif'
     # Player HP Hearts at top-left (placeholder BoxLayout)
     BoxLayout:
         id: hp_layout
-        pos: 10, root.height - 50  # Fixed at top-left from start
+        pos: 10, root.height - 10  # Fixed at top-left from start
         size_hint: None, None
         size: 450, 45
         spacing: 1
