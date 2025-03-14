@@ -69,7 +69,7 @@ class Game(Widget):
             self.music_manager.play_spawn()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                #print(f"Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.attack_cooldown = 0.5
         self.last_attack_time = 0
         self.mouse_pos = (0, 0)
@@ -134,7 +134,7 @@ class Game(Widget):
 
     def spawn_boss(self):
         """Spawn the boss in Stage 5."""
-        print("Spawning Boss in Stage 5!")
+        #print("Spawning Boss in Stage 5!")
         scale_x = Window.width / 1280
         scale_y = Window.height / 720
         self.boss = Boss(pos=(Window.width - 60 * scale_x, 0))
@@ -152,9 +152,9 @@ class Game(Widget):
         scale_y = Window.height / 720
         portal_x = max(0, min(self.last_enemy_death_pos[0] * scale_x, Window.width - 80 * scale_x))
         portal_y = max(0, min(self.last_enemy_death_pos[1] * scale_y, Window.height - 240 * scale_y))
-        self.portal = Portal(pos=(portal_x, portal_y))
+        self.portal = Portal(pos=(portal_x, portal_y), player=self.player)  # Pass the player reference
         self.add_widget(self.portal)
-        print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
+        #print(f"Portal spawned at {self.portal.pos} (last enemy death position)")
 
     def _update_hp_position(self, instance, value):
         self.update_hp_hearts()
@@ -299,7 +299,7 @@ class Game(Widget):
         if self.stage_number >= self.MAX_STAGES:
             return
         self.stage_number += 1
-        print(f"Moving to Stage {self.stage_number}")
+        #print(f"Moving to Stage {self.stage_number}")
         for attack in self.player_attacks + self.enemy_attacks:
             self.remove_widget(attack)
         self.player_attacks.clear()
@@ -315,7 +315,7 @@ class Game(Widget):
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
                 self.music_manager.play_spawn()
-                print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                #print(f"Stage {self.stage_number}: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         if self.ENABLE_PLAYER:
             scale_x = Window.width / 1280
             self.player.pos = (100 * scale_x, 0)
@@ -385,7 +385,7 @@ class Game(Widget):
         for attack in self.player_attacks[:]:
             attack.move()
             attack_rect = attack.get_hitbox_rect()
-            print(f"Player attack at: {attack_rect}")  # Debug
+            #print(f"Player attack at: {attack_rect}")  # Debug
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 try:
                     self.remove_widget(attack)
@@ -420,14 +420,14 @@ class Game(Widget):
                             if enemy.health <= 0:
                                 self.score += 100
                                 self.last_enemy_death_pos = [enemy.x / scale_x, enemy.y / (Window.height / 720)]
-                                print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
+                                #print(f"Enemy killed! Score increased to {self.score}, Last death pos: {self.last_enemy_death_pos}")
                             break
 
         # Step 2: Update enemy attacks and check collisions with player
         for attack in self.enemy_attacks[:]:
             attack.move()
             attack_rect = attack.get_hitbox_rect()
-            print(f"Enemy attack at: {attack_rect}")  # Debug
+            #print(f"Enemy attack at: {attack_rect}")  # Debug
             if not (0 <= attack.x <= Window.width and 0 <= attack.y <= Window.height):
                 try:
                     self.remove_widget(attack)
@@ -450,7 +450,7 @@ class Game(Widget):
                 enemy_attack_rect = enemy_attack.get_hitbox_rect()
                 if Hitbox.collide(player_attack_rect, enemy_attack_rect):
                     collisions.append((player_attack, enemy_attack))
-                    print(f"Collision detected: Player attack {player_attack_rect} vs Enemy attack {enemy_attack_rect}")
+                    #print(f"Collision detected: Player attack {player_attack_rect} vs Enemy attack {enemy_attack_rect}")
                     break
 
         # Process all collisions
@@ -462,7 +462,7 @@ class Game(Widget):
                 if enemy_attack in self.enemy_attacks:
                     self.remove_widget(enemy_attack)
                     self.enemy_attacks.remove(enemy_attack)
-                print("Player projectile collided with enemy projectile! Both destroyed.")
+                #print("Player projectile collided with enemy projectile! Both destroyed.")
             except Exception as e:
                 print(f"Error handling collision: {e}")
 
@@ -522,7 +522,7 @@ class Game(Widget):
             self.add_widget(self.player)
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-                print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
+                #print(f"Restart: Set target for enemy at {enemy.pos} to player at {self.player.pos}")
         self.last_enemy_death_pos = [Window.width - 60, 10]
         self.update_hp_hearts()
         self.music_manager.play_music(self.stage_number)

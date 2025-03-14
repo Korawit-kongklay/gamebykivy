@@ -18,23 +18,21 @@ class Portal(Widget):
         super().__init__(**kwargs)
         self.size = size  # Size set to 80x240
         self.pos = pos
+        self.player = player  # Store reference to player for dynamic updates
         self.frame_duration = 0.2  # 200ms per frame
         self.animation_event = None
         self.hitbox = Hitbox(offset_x=0, offset_y=0, width=80, height=240)  # Matches size
         self.rect_instruction = None
         self.rot = None
-        # Determine initial rotation based on player's horizontal position
-        self.initial_angle = 0
+        # Initial angle based on player's position
+        self.angle = 0
         if player:
-            player_center_x = player.center_x
-            portal_center_x = pos[0] + size[0] / 2  # Center of portal
-            if player_center_x < portal_center_x:
-                self.initial_angle = 180  # Face left
-            else:
-                self.initial_angle = 0    # Face right
+            self.update_angle()  # Set initial angle
         self.load_animations(gif_path)
         if self.textures:
             self.animation_event = Clock.schedule_interval(self.update_frame, self.frame_duration)
+            # Schedule dynamic angle updates
+            Clock.schedule_interval(self.update, 1.0 / 60.0)
             print(f"Animation scheduled with interval: {self.frame_duration} seconds")
         else:
             print("No textures loaded, using fallback")
@@ -63,7 +61,24 @@ class Portal(Widget):
             Color(0, 1, 1, 1)  # Cyan as fallback
             self.rect_instruction = Rectangle(pos=self.pos, size=self.size)
 
+    def update_angle(self):
+        """Update the portal's facing direction based on the player's position."""
+        if not self.player:
+            return
+        player_center_x = self.player.center_x
+        portal_center_x = self.center_x
+        if player_center_x < portal_center_x:
+            self.angle = 180  # Face left
+        else:
+            self.angle = 0    # Face right
+
+    def update(self, dt: float):
+        """Update method to dynamically adjust the portal's orientation."""
+        self.update_angle()
+        self.update_graphics()
+
     def update_graphics(self):
+        """Update the graphical representation with the current angle."""
         # Clear previous instructions
         if self.rect_instruction:
             self.canvas.remove(self.rect_instruction)
@@ -72,34 +87,37 @@ class Portal(Widget):
 
         with self.canvas:
             PushMatrix()
-            # Use the static initial angle (0 or 180)
-            self.rot = Rotate(angle=self.initial_angle, origin=(self.center_x, self.center_y))
+            self.rot = Rotate(angle=self.angle, origin=(self.center_x, self.center_y))
             self.rect_instruction = Rectangle(pos=self.pos, size=self.size, texture=self.texture)
             PopMatrix()
 
         self.bind(pos=self.update_rect, size=self.update_rect)
 
     def update_frame(self, dt: float):
+        """Update the animation frame."""
         if self.frame_count and self.textures and self.rect_instruction:
             self.current_frame = (self.current_frame + 1) % self.frame_count
             self.texture = self.textures[self.current_frame]
-            self.update_graphics()  # Redraw with static rotation
+            self.update_graphics()  # Redraw with current rotation
             self.canvas.ask_update()
             print(f"Updated to frame {self.current_frame} at time {Clock.get_time()}")
         else:
             print(f"Cannot update frame: frame_count={self.frame_count}, textures={len(self.textures)}, rect={self.rect_instruction is not None}")
 
     def update_rect(self, *args):
+        """Update the position and size of the rectangle."""
         if self.rect_instruction:
             self.rect_instruction.pos = self.pos
             self.rect_instruction.size = self.size
             if self.rot:
-                self.rot.origin = (self.center_x, self.center_y)  # Update origin only, not angle
+                self.rot.origin = (self.center_x, self.center_y)
 
     def get_hitbox_rect(self):
+        """Return the hitbox rectangle."""
         return self.hitbox.get_rect(self.x, self.y)
 
     def on_parent(self, instance, parent):
+        """Handle removal from parent by canceling scheduled events."""
         if parent is None and self.animation_event:
             self.animation_event.cancel()
             print("Animation event cancelled due to parent removal")
