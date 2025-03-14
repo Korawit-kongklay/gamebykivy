@@ -20,7 +20,8 @@ class MainMenu(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.spacing = 20
+        self.padding = 50
+        self.spacing = 20  # คงระยะห่างระหว่างปุ่มไว้
         self.music_manager = MusicManager()
         self.menu_music_volume = 1.0
         self.effects_volume = 1.0
@@ -34,16 +35,18 @@ class MainMenu(BoxLayout):
         # Title
         self.add_widget(Label(
             text='DinoCon',
-            font_size=48,
-            size_hint=(1, 0.4)
+            font_size=120,
+            size_hint=(1, 0.3),  # ลดขนาด height ของ title เล็กน้อย
+            bold=True
         ))
         
         # Start Button
         self.start_button = Button(
             text='Start Game',
-            size_hint=(0.5, 0.2),
+            size_hint=(0.4, 0.15),  # ปรับขนาดให้เล็กลงและสมส่วน
             pos_hint={'center_x': 0.5},
-            background_color=(0, 1, 0, 1)
+            background_color=(0, 1, 0, 1),
+            font_size=24  # เพิ่มขนาดตัวอักษรให้ดูดีขึ้น
         )
         self.start_button.bind(on_press=self.start_game)
         self.add_widget(self.start_button)
@@ -51,9 +54,10 @@ class MainMenu(BoxLayout):
         # Settings Button
         self.settings_button = Button(
             text='Settings',
-            size_hint=(0.5, 0.2),
+            size_hint=(0.4, 0.15),  # ขนาดเท่ากับ Start Button
             pos_hint={'center_x': 0.5},
-            background_color=(0.5, 0.5, 1, 1)
+            background_color=(0.5, 0.5, 1, 1),
+            font_size=24
         )
         self.settings_button.bind(on_press=self.show_settings)
         self.add_widget(self.settings_button)
@@ -61,9 +65,10 @@ class MainMenu(BoxLayout):
         # Exit Button
         self.exit_button = Button(
             text='Exit',
-            size_hint=(0.5, 0.2),
+            size_hint=(0.4, 0.15),  # ขนาดเท่ากันทั้งสามปุ่ม
             pos_hint={'center_x': 0.5},
-            background_color=(1, 0, 0, 1)
+            background_color=(1, 0, 0, 1),
+            font_size=24
         )
         self.exit_button.bind(on_press=self.exit_game)
         self.add_widget(self.exit_button)
