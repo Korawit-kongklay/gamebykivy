@@ -113,4 +113,4 @@ class Character(Widget):
 
 class Player(Character):
     def __init__(self, health=3, **kwargs):
-        super().__init__(gif_path='assets/gifs/ufopug.gif', health=health, **kwargs)
+        super().__init__(gif_path='assets/gifs/dino1.gif', health=health, **kwargs)
