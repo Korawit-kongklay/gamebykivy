@@ -5,17 +5,28 @@ from kivy.uix.slider import Slider
 from kivy.uix.popup import Popup
 from kivy.app import App
 from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
+from kivy.clock import Clock
+from kivy.properties import ListProperty, NumericProperty
+from components.menubackground import GifLoader
 from components.game import Game
 from components.music_manager import MusicManager
+import os
 
 class MainMenu(BoxLayout):
+    current_frame = NumericProperty(0)
+    textures = ListProperty([])
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.spacing = 20
-        self.music_manager = MusicManager()  # Singleton instance
+        self.music_manager = MusicManager()
         self.menu_music_volume = 1.0
         self.effects_volume = 1.0
+        
+        # โหลด background GIF
+        self.load_background_gif()
         
         # เริ่มเล่นเพลงเมนู
         self.music_manager.play_menu_music()
@@ -57,19 +68,51 @@ class MainMenu(BoxLayout):
         self.exit_button.bind(on_press=self.exit_game)
         self.add_widget(self.exit_button)
 
+    def load_background_gif(self):
+        try:
+            # ปรับ path ให้ตรงกับโครงสร้างโฟลเดอร์: game/assets/gifs/darkforest.gif
+            gif_path = os.path.join(os.path.dirname(__file__), 'assets', 'gifs', 'darkforest.gif')
+            frames = GifLoader.load_gif_frames(gif_path)
+            self.textures = GifLoader.create_textures(frames)
+            if self.textures:
+                # ใช้ขนาดของหน้าจอให้ GIF เต็มจอ
+                self.size = Window.size
+                with self.canvas.before:
+                    Color(1, 1, 1, 1)
+                    self.bg_rect = Rectangle(
+                        pos=(0, 0),  # ตั้งค่าเริ่มต้นที่มุมล่างซ้าย
+                        size=Window.size,  # ทำให้ขนาดเท่ากับหน้าจอ
+                        texture=self.textures[0]
+                    )
+                # ผูกการอัพเดทขนาดหน้าจอ
+                self.bind(size=self._update_rect, pos=self._update_rect)
+                Clock.schedule_interval(self.update_background, 0.1)
+            else:
+                raise ValueError("No textures loaded for background")
+        except Exception as e:
+            print(f"Error loading background GIF: {e}")
+
+    def _update_rect(self, instance, value):
+        """อัพเดทตำแหน่งและขนาดของ Rectangle เมื่อหน้าจอเปลี่ยน"""
+        if hasattr(self, 'bg_rect'):
+            self.bg_rect.pos = self.pos
+            self.bg_rect.size = self.size
+
+    def update_background(self, dt):
+        if self.textures:
+            self.current_frame = (self.current_frame + 1) % len(self.textures)
+            self.bg_rect.texture = self.textures[self.current_frame]  # แก้ไขที่นี่
+
     def start_game(self, instance):
-        """Switch to the game screen and pass music manager."""
         self.music_manager.stop_music()
         app = App.get_running_app()
         app.root.clear_widgets()
-        game = Game(music_manager=self.music_manager)  # ส่ง MusicManager instance
+        game = Game(music_manager=self.music_manager)
         app.root.add_widget(game)
 
     def show_settings(self, instance):
-        """Show settings popup with volume controls."""
         settings_content = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
-        # Background Music Volume Slider
         music_label = Label(text='Background Music Volume')
         settings_content.add_widget(music_label)
         
@@ -82,7 +125,6 @@ class MainMenu(BoxLayout):
         music_slider.bind(value=self.on_music_volume_change)
         settings_content.add_widget(music_slider)
         
-        # Sound Effects Volume Slider
         effects_label = Label(text='Sound Effects Volume')
         settings_content.add_widget(effects_label)
         
@@ -95,7 +137,6 @@ class MainMenu(BoxLayout):
         effects_slider.bind(value=self.on_effects_volume_change)
         settings_content.add_widget(effects_slider)
         
-        # Close Button
         close_button = Button(
             text='Close',
             size_hint=(1, 0.3)
@@ -112,15 +153,12 @@ class MainMenu(BoxLayout):
         popup.open()
 
     def on_music_volume_change(self, instance, value):
-        """Adjust background music volume and store it."""
         self.music_manager.set_music_volume(value)
 
     def on_effects_volume_change(self, instance, value):
-        """Adjust sound effects volume and store it."""
         self.music_manager.set_effects_volume(value)
 
     def exit_game(self, instance):
-        """Exit the application."""
         self.music_manager.stop_music()
         App.get_running_app().stop()
 
