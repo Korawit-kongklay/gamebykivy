@@ -142,8 +142,8 @@ class Game(Widget):
         scale_y = Window.height / 720
         self.boss = Boss(pos=(Window.width - 60 * scale_x, 0))
         self.boss.size = (240 * scale_x, 240 * scale_y)
-        self.boss.health = 50  # Set boss HP to 50
-        self.boss.max_health = 50  # Optional: Set max_health for HP bar scaling
+        self.boss.health = 150  # Set boss HP to 50
+        self.boss.max_health = 150  # Optional: Set max_health for HP bar scaling
         self.boss.target = self.player
         self.add_widget(self.boss)
         self.boss.velocity_x = -1 * scale_x
