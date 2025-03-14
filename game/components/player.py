@@ -114,3 +114,27 @@ class Character(Widget):
 class Player(Character):
     def __init__(self, health=3, **kwargs):
         super().__init__(gif_path='assets/gifs/ufopug.gif', health=health, **kwargs)
+    
+    def move(self):
+        """Move the player and ensure they stay within window boundaries."""
+        new_pos = Vector(*self.velocity) + self.pos
+        
+        # Horizontal boundary checks
+        if new_pos[0] < 0:
+            new_pos[0] = 0
+            self.velocity_x = 0  # Stop movement to the left
+        elif new_pos[0] > Window.width - self.width:
+            new_pos[0] = Window.width - self.width
+            self.velocity_x = 0  # Stop movement to the right
+            
+        # Vertical boundary checks
+        if new_pos[1] < 0:
+            new_pos[1] = 0
+            self.velocity_y = 0  # Stop downward movement
+        elif new_pos[1] > Window.height - self.height:
+            new_pos[1] = Window.height - self.height
+            self.velocity_y = 0  # Stop upward movement
+            
+        self.pos = new_pos
+        if self.debug_hitbox_visible:
+            self.update_hitbox_debug()

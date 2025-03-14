@@ -38,7 +38,10 @@ class Enemy(Character):
         Clock.schedule_interval(self.update_ai, 1.0 / 30.0)
 
     def move(self):
+        """Move the enemy and ensure they stay within window boundaries."""
         new_pos = Vector(*self.velocity) + self.pos
+
+        # Horizontal boundary checks
         if new_pos[0] < 0:
             self.velocity_x = abs(self.velocity_x)
             self.facing_right = True
@@ -47,10 +50,19 @@ class Enemy(Character):
             self.velocity_x = -abs(self.velocity_x)
             self.facing_right = False
             new_pos[0] = Window.width - self.width
+
+        # Vertical boundary checks
+        if new_pos[1] < 0:
+            new_pos[1] = 0
+            self.velocity_y = 0  # Stop downward movement
+        elif new_pos[1] > Window.height - self.height:
+            new_pos[1] = Window.height - self.height
+            self.velocity_y = 0  # Stop upward movement
+
         self.pos = new_pos
         if self.debug_hitbox_visible:
             self.update_hitbox_debug()
-        self.update_hp_bar()  # Update HP bar position
+        self.update_hp_bar()
 
     def update_ai(self, dt):
         if not self.target or not self.parent:
@@ -191,8 +203,10 @@ class FlyingEnemy(Enemy):
         Clock.schedule_interval(self.update_flying, 1.0 / 60.0)  # Faster update for smooth flying
 
     def move(self):
-        """Move horizontally, with vertical movement handled by update_flying."""
+        """Move horizontally and ensure the flying enemy stays within window boundaries."""
         new_pos = Vector(self.velocity_x, 0) + self.pos  # Only apply horizontal velocity here
+
+        # Horizontal boundary checks
         if new_pos[0] < 0:
             self.velocity_x = abs(self.velocity_x)
             self.facing_right = True
@@ -201,16 +215,25 @@ class FlyingEnemy(Enemy):
             self.velocity_x = -abs(self.velocity_x)
             self.facing_right = False
             new_pos[0] = Window.width - self.width
+
         self.pos = new_pos
         if self.debug_hitbox_visible:
             self.update_hitbox_debug()
         self.update_hp_bar()
 
     def update_flying(self, dt):
-        """Update vertical position with sinusoidal oscillation."""
+        """Update vertical position with sinusoidal oscillation, keeping within window boundaries."""
         self.time += dt
-        self.y = self.base_y + math.sin(self.time * self.fly_frequency) * self.fly_amplitude
-        self.update_hp_bar()  # Ensure HP bar follows the flying enemy
+        desired_y = self.base_y + math.sin(self.time * self.fly_frequency) * self.fly_amplitude
+        
+        # Clamp vertical position within window boundaries
+        if desired_y < 0:
+            desired_y = 0
+        elif desired_y > Window.height - self.height:
+            desired_y = Window.height - self.height
+            
+        self.y = desired_y
+        self.update_hp_bar()
 
     def update_ai(self, dt):
         """Override AI to handle flying behavior."""

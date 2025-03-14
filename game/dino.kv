@@ -35,12 +35,12 @@
             pos: 0, 0  # Absolute window coordinates (bottom-left)
             size: Window.size  # Use full window size
             source: 'assets/gifs/darkforest.gif'
-    # Player HP Hearts at top-left (placeholder BoxLayout)
+    # Player HP Hearts at top-left
     BoxLayout:
         id: hp_layout
-        pos: 10, root.height - 10  # Fixed at top-left from start
+        pos: 10, Window.height - 55  # 10px from left, 10px from top (height 45 + 10 padding)
         size_hint: None, None
-        size: 450, 45
+        size: 1080, 45
         spacing: 1
     # Stage, Score Label (top-right)
     Label:

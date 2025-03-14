@@ -81,10 +81,10 @@ class Game(Widget):
         try:
             self.hp_layout = self.ids.hp_layout
             self.hp_layout.bind(pos=self._update_hp_position)
+            self.update_hp_hearts()  # Ensure initial position is set
         except AttributeError:
             print("Warning: hp_layout not found in ids. Ensure .kv file is properly set up.")
             self.hp_layout = None
-        self.update_hp_hearts()
         if self.stage_number == 5 and self.ENABLE_BOSS and not self.boss:
             self.spawn_boss()
 
@@ -115,6 +115,8 @@ class Game(Widget):
             self.boss.size = (60 * scale_x, 80 * scale_y)
             self.boss.pos = (Window.width - 60 * scale_x, self.boss.y)
 
+        if self.hp_layout:
+            self.hp_layout.pos = (10, height - 55)  # Keep at top-left
         self.update_hp_hearts()
         self._update_restart_ui_positions()
 
@@ -142,7 +144,7 @@ class Game(Widget):
         scale_y = Window.height / 720
         self.boss = Boss(pos=(Window.width - 60 * scale_x, 0))
         self.boss.size = (240 * scale_x, 240 * scale_y)
-        self.boss.health = 150  # Set boss HP to 50
+        self.boss.health = 150  # Set boss HP to 150
         self.boss.max_health = 150  # Optional: Set max_health for HP bar scaling
         self.boss.target = self.player
         self.add_widget(self.boss)
@@ -161,6 +163,9 @@ class Game(Widget):
         self.add_widget(self.portal)
 
     def _update_hp_position(self, instance, value):
+        """Update HP layout position dynamically."""
+        if self.hp_layout:
+            self.hp_layout.pos = (10, Window.height - 55)  # Keep at top-left
         self.update_hp_hearts()
 
     def bind_inputs(self):
@@ -247,6 +252,8 @@ class Game(Widget):
         for _ in range(remaining_hearts):
             blank = Image(source='assets/images/blank_heart.png', size=(50 * scale_x, 50 * scale_x), allow_stretch=True, keep_ratio=False)
             self.hp_layout.add_widget(blank)
+        # Ensure position is updated after rebuilding
+        self.hp_layout.pos = (10, Window.height - 55)  # Keep at top-left
 
     def _update_restart_ui_positions(self):
         """Update positions of restart button and end game label on window resize."""
@@ -312,8 +319,6 @@ class Game(Widget):
             self.boss.move()
             self.boss.update(self, dt)
             self.handle_platform_collision(self.boss)
-            if self.boss.x < 0:
-                self.boss.x = 0
             if self.boss.health <= 0 and not self.portal:
                 self.spawn_portal()
             if self.debug_hitbox:
@@ -403,7 +408,7 @@ class Game(Widget):
         entity_rect = entity.get_hitbox_rect()
         on_platform = False
         entity_prev_y = entity.y + entity.velocity_y
-
+    
         for platform in self.stage.platforms:
             plat_rect = platform.get_hitbox_rect()
             if Hitbox.collide(entity_rect, plat_rect):
@@ -414,13 +419,13 @@ class Game(Widget):
                         entity.velocity_y = 0
                         on_platform = True
                         continue
-                continue
-
+                    continue
+                
         if entity.y <= 0:
             entity.y = 0
             entity.velocity_y = 0
             on_platform = True
-
+    
         return on_platform
 
     def update_attacks(self):

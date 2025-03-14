@@ -1,4 +1,4 @@
-from .enemy import Enemy
+from .enemy import Enemy, FlyingEnemy
 from .hitbox import Hitbox
 from kivy.properties import NumericProperty, ReferenceListProperty, BooleanProperty
 from kivy.vector import Vector
@@ -54,8 +54,10 @@ class Boss(Enemy):
         pass  # Do nothing; Boss uses its own update method
 
     def move(self):
-        """Move the boss like Enemy, respecting boundaries."""
+        """Move the boss and ensure they stay within window boundaries."""
         new_pos = Vector(*self.velocity) + self.pos
+        
+        # Horizontal boundary checks
         if new_pos[0] < 0:
             self.velocity_x = abs(self.velocity_x)
             self.facing_right = True
@@ -64,6 +66,15 @@ class Boss(Enemy):
             self.velocity_x = -abs(self.velocity_x)
             self.facing_right = False
             new_pos[0] = Window.width - self.width
+            
+        # Vertical boundary checks
+        if new_pos[1] < 0:
+            new_pos[1] = 0
+            self.velocity_y = 0  # Stop downward movement
+        elif new_pos[1] > Window.height - self.height:
+            new_pos[1] = Window.height - self.height
+            self.velocity_y = 0  # Stop upward movement
+            
         self.pos = new_pos
         if self.debug_hitbox_visible:
             self.update_hitbox_debug()
@@ -212,18 +223,31 @@ class Boss(Enemy):
         self.velocity_x = 0
 
     def summon_minions(self, game):
-        """Summon smaller enemies."""
+        """Summon smaller enemies, randomly choosing between Enemy and FlyingEnemy."""
         print("Boss is summoning minions!")
-        minion_count = 2
+        minion_count = 2  # Number of minions to spawn
+        enemy_types = [Enemy, FlyingEnemy]  # List of possible enemy types
+
         for _ in range(minion_count):
+            # Randomly choose an enemy type
+            enemy_class = random.choice(enemy_types)
+
+            # Define spawn position
             spawn_x = random.uniform(self.x - 100, self.x + 100)
             spawn_y = random.uniform(0, Window.height - 80)
             spawn_x = max(0, min(spawn_x, Window.width - 80))
             spawn_y = max(0, min(spawn_y, Window.height - 80))
-            minion = Enemy(pos=(spawn_x, spawn_y))
+
+            # Instantiate the enemy based on the chosen class
+            if enemy_class == Enemy:
+                minion = Enemy(pos=(spawn_x, spawn_y))
+            else:  # FlyingEnemy
+                minion = FlyingEnemy(pos=(spawn_x, spawn_y))
+
+            # Add the minion to the game
             game.stage.add_widget(minion)
             game.stage.obstacles.append(minion)
-            minion.target = game.player
+            minion.target = game.player  # Set the player as the target
 
     def enhanced_shoot(self, game):
         """Shoot multiple projectiles in a spread pattern toward the player."""
