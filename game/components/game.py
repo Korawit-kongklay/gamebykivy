@@ -40,7 +40,7 @@ class Game(Widget):
     ENABLE_BOSS = True
     MAX_STAGES = 5
 
-    def __init__(self, music_manager=None, initial_player_hp=20, **kwargs):
+    def __init__(self, music_manager=None, initial_player_hp=100, **kwargs):
         super().__init__(**kwargs)
         self.initial_player_hp = initial_player_hp
         self.hp_layout = None
@@ -72,7 +72,7 @@ class Game(Widget):
             self.music_manager.play_spawn()
             for enemy in self.stage.obstacles:
                 enemy.target = self.player
-        self.attack_cooldown = 0.5
+        self.attack_cooldown = 0.1
         self.last_attack_time = 0
         self.mouse_pos = (0, 0)
         self.score = 0
