@@ -40,7 +40,7 @@ class Boss(Enemy):
         self.aoe_cooldown = 10.0
         self.teleport_cooldown = 10.0
         self.ground_slam_cooldown = 5.0
-        self.enrage_threshold = 2  # Enter enrage mode at HP <= 2
+        self.enrage_threshold = 140  # Enter enrage mode at HP <= 2
         self.aoe_warning = None  # Widget for AoE warning
         # AI-specific attributes from Enemy, adjusted for longer idling
         self.wander_target = None
