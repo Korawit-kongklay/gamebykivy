@@ -67,7 +67,7 @@ class MusicManager:
             self.fade_event = None
 
     def fade_out_music(self, duration=1.0):
-        """Fade out the current music over the specified duration (in seconds)."""
+    
         if not self.current_music or self.current_music.state != 'play':
             return
         
@@ -79,9 +79,9 @@ class MusicManager:
 
         def _fade(dt):
             if self.current_music and self.current_music.state == 'play':
-                self.current_music.volume -= step
-                if self.current_music.volume <= 0:
-                    self.current_music.volume = 0
+                new_volume = max(0, self.current_music.volume - step)  # Clamp to 0
+                self.current_music.volume = new_volume
+                if new_volume <= 0:
                     self.current_music.stop()
                     self.current_music = None
                     if self.fade_event:
