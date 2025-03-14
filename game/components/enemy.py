@@ -158,19 +158,11 @@ class Enemy(Character):
             print(f"Enemy at {self.pos} has died.")
 
     def attack(self):
-        from .attack import EnemyProjectile
-        if not self.parent or not isinstance(self.parent, Widget):
-            return
-        game = self.parent.parent if self.parent.parent else None
-        if game and hasattr(game, 'enemy_attacks'):
-            attack = EnemyProjectile(start_pos=(self.x + self.width / 2, self.y + self.height / 2),
-                                    target_pos=(self.target.x + self.target.width / 2, self.target.y + self.target.height / 2))
-            game.add_widget(attack)
-            game.enemy_attacks.append(attack)
+        """Turtles do not shoot attacks."""
+        pass  # Explicitly disable attack for turtles
 
     def update_hp_bar(self):
         """Draw or update the HP bar above the enemy."""
-        # Ensure hp_bar_instruction exists before removing it
         if hasattr(self, 'hp_bar_instruction') and self.hp_bar_instruction:
             self.canvas.after.remove(self.hp_bar_instruction)
         hp_width = (self.health / self.max_health) * self.width  # Scale bar width
@@ -282,3 +274,17 @@ class FlyingEnemy(Enemy):
         else:
             normalized_dx = dx / distance
             self.velocity_x = normalized_dx * self.move_speed * 0.7
+
+    def attack(self):
+        """Flying enemies shoot projectiles."""
+        from .attack import EnemyProjectile
+        if not self.parent or not isinstance(self.parent, Widget):
+            return
+        game = self.parent.parent if self.parent.parent else None
+        if game and hasattr(game, 'enemy_attacks'):
+            attack = EnemyProjectile(
+                start_pos=(self.x + self.width / 2, self.y + self.height / 2),
+                target_pos=(self.target.x + self.target.width / 2, self.target.y + self.target.height / 2)
+            )
+            game.add_widget(attack)
+            game.enemy_attacks.append(attack)
